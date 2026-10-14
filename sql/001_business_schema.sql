@@ -1,0 +1,52 @@
+-- 设备台账阶段：只创建缺失的业务表，不删除或清空现有数据。
+-- 在 equipment_maintenance 项目库执行。工单表为历史查询与报废检查预留。
+CREATE TABLE IF NOT EXISTS eq_equipment (
+    equipment_id BIGINT NOT NULL AUTO_INCREMENT,
+    equipment_code VARCHAR(32) NOT NULL,
+    equipment_name VARCHAR(100) NOT NULL,
+    equipment_type VARCHAR(32) NOT NULL,
+    model VARCHAR(100) DEFAULT '',
+    location VARCHAR(200) NOT NULL,
+    equipment_status VARCHAR(32) NOT NULL DEFAULT 'IN_SERVICE',
+    version INT NOT NULL DEFAULT 0,
+    create_by VARCHAR(64) NOT NULL,
+    create_time DATETIME NOT NULL,
+    update_by VARCHAR(64) DEFAULT NULL,
+    update_time DATETIME DEFAULT NULL,
+    remark VARCHAR(2000) DEFAULT '',
+    PRIMARY KEY (equipment_id),
+    UNIQUE KEY uk_eq_equipment_code (equipment_code),
+    KEY idx_eq_equipment_type_status (equipment_type, equipment_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备台账';
+
+CREATE TABLE IF NOT EXISTS eq_work_order (
+    work_order_id BIGINT NOT NULL AUTO_INCREMENT,
+    work_order_no VARCHAR(40) NOT NULL,
+    equipment_id BIGINT NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    symptom VARCHAR(2000) NOT NULL,
+    fault_category VARCHAR(32) NOT NULL,
+    priority VARCHAR(16) NOT NULL,
+    occurred_time DATETIME NOT NULL,
+    reporter_id BIGINT NOT NULL,
+    handler_id BIGINT DEFAULT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'WAITING',
+    assigned_time DATETIME DEFAULT NULL,
+    last_submit_time DATETIME DEFAULT NULL,
+    closed_time DATETIME DEFAULT NULL,
+    cancelled_time DATETIME DEFAULT NULL,
+    version INT NOT NULL DEFAULT 0,
+    create_by VARCHAR(64) NOT NULL,
+    create_time DATETIME NOT NULL,
+    update_by VARCHAR(64) DEFAULT NULL,
+    update_time DATETIME DEFAULT NULL,
+    PRIMARY KEY (work_order_id),
+    UNIQUE KEY uk_eq_work_order_no (work_order_no),
+    KEY idx_eq_work_order_equipment_time (equipment_id, create_time),
+    KEY idx_eq_work_order_reporter_time (reporter_id, create_time),
+    KEY idx_eq_work_order_handler_status_time (handler_id, status, create_time),
+    KEY idx_eq_work_order_status_time (status, create_time),
+    CONSTRAINT fk_eq_work_order_equipment FOREIGN KEY (equipment_id) REFERENCES eq_equipment(equipment_id),
+    CONSTRAINT fk_eq_work_order_reporter FOREIGN KEY (reporter_id) REFERENCES sys_user(user_id),
+    CONSTRAINT fk_eq_work_order_handler FOREIGN KEY (handler_id) REFERENCES sys_user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='故障工单，流程在下一阶段实现';
