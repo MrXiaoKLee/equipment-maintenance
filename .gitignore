@@ -1,0 +1,31 @@
+# Java and frontend build outputs
+**/target/
+**/node_modules/
+**/dist/
+**/coverage/
+
+# Runtime files
+**/*.log
+/logs/
+/uploads/
+
+# Local credentials and machine-specific configuration
+/equipment-backend/ruoyi-admin/src/main/resources/application-druid.yml
+.env.local
+.env.*.local
+**/application-local.yml
+**/application-local.yaml
+**/application-local.properties
+**/application-private.yml
+**/application-private.yaml
+**/application-private.properties
+
+# Editor and operating system files
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+*.swp
+
+# Temporary upstream import marker
+/.upstream-import-path.tmp
