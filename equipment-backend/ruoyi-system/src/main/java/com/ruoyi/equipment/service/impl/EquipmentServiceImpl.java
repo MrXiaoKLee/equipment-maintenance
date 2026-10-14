@@ -10,6 +10,7 @@ import java.util.Objects;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import com.github.pagehelper.PageHelper;
 import com.ruoyi.common.constant.HttpStatus;
 import com.ruoyi.common.core.domain.entity.SysRole;
@@ -145,9 +146,10 @@ public class EquipmentServiceImpl implements IEquipmentService
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public Equipment changeStatus(Long id, EquipmentStatusRequest request)
     {
+        // 权限查询先于设备锁。等待设备锁后，工单检查必须看到刚提交的数据，不能沿用旧快照。
         requireManager();
         Equipment equipment = requireEquipment(mapper.lockById(id));
         requireVersion(equipment, request.getVersion());
