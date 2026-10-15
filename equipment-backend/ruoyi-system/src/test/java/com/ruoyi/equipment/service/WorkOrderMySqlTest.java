@@ -117,6 +117,16 @@ class WorkOrderMySqlTest
         assertEquals(404, assertThrows(ServiceException.class, () -> service.records(created.getWorkOrderId())).getCode());
         when(authorization.requireReader()).thenReturn(new EquipmentActor(300L,"maintainer","Maintainer",false,false,true));
         assertEquals(1, service.list(new WorkOrderQuery(),1,10).size());
+        when(authorization.requireReporter()).thenReturn(new EquipmentActor(200L,"other","Other",false,true,false));
+        var second = service.create(request());
+        MaintainerOption dualRoleHandler = new MaintainerOption();
+        dualRoleHandler.setUserId(100L); dualRoleHandler.setUserName("dual"); dualRoleHandler.setNickName("Dual");
+        doReturn(dualRoleHandler).when(mapper).lockMaintainer(100L);
+        assignment.setHandlerId(100L);
+        service.assign(second.getWorkOrderId(), assignment);
+        when(authorization.requireReader()).thenReturn(new EquipmentActor(100L,"dual","Dual",false,true,true));
+        assertEquals(2, service.list(new WorkOrderQuery(),1,10).size());
+        assertEquals(2, service.records(second.getWorkOrderId()).size());
     }
 
     @Test
@@ -139,7 +149,7 @@ class WorkOrderMySqlTest
         assertEquals("WAITING", mapper.selectById(created.getWorkOrderId()).getStatus());
         assertEquals(0, mapper.selectById(created.getWorkOrderId()).getVersion());
         WorkOrderCancelRequest cancellation = new WorkOrderCancelRequest();
-        cancellation.setVersion(0); cancellation.setDescription("模拟取消");
+        cancellation.setVersion(0); cancellation.setReason("模拟取消");
         assertThrows(DataAccessException.class, () -> service.cancel(created.getWorkOrderId(), cancellation));
         assertEquals("WAITING", mapper.selectById(created.getWorkOrderId()).getStatus());
         assertEquals(1, mapper.selectRecords(created.getWorkOrderId()).size());
@@ -154,7 +164,7 @@ class WorkOrderMySqlTest
         assignment.setVersion(0); assignment.setHandlerId(300L);
         assertEquals(400, assertThrows(ServiceException.class, () -> service.assign(created.getWorkOrderId(),assignment)).getCode());
         WorkOrderCancelRequest cancellation = new WorkOrderCancelRequest();
-        cancellation.setVersion(0); cancellation.setDescription("模拟取消");
+        cancellation.setVersion(0); cancellation.setReason("模拟取消");
         assertEquals("CANCELLED", service.cancel(created.getWorkOrderId(), cancellation).getStatus());
         assertEquals(409, assertThrows(ServiceException.class, () -> service.cancel(created.getWorkOrderId(),cancellation)).getCode());
         assertEquals(2, mapper.selectRecords(created.getWorkOrderId()).size());

@@ -1,12 +1,14 @@
 package com.ruoyi.equipment.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 /** 工单阶段的数据契约。 */
 public class WorkOrderCancelRequest
 {
     private Integer version;
 
-    private String description;
+    @JsonAlias("description")
+    private String reason;
 
     public Integer getVersion()
     {
@@ -18,14 +20,14 @@ public class WorkOrderCancelRequest
         this.version = version;
     }
 
-    public String getDescription()
+    public String getReason()
     {
-        return description;
+        return reason;
     }
 
-    public void setDescription(String description)
+    public void setReason(String reason)
     {
-        this.description = description;
+        this.reason = reason;
     }
 
 }

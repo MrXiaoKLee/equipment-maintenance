@@ -180,7 +180,7 @@ public class WorkOrderServiceImpl implements IWorkOrderService
             throw new ServiceException("只有本人报修或设备管理人员可以取消", 403);
         }
         requireWaitingVersion(order, request.getVersion());
-        String reason = text(request.getDescription(), "取消原因", 2000, true);
+        String reason = text(request.getReason(), "取消原因", 2000, true);
         Date now = new Date();
         order.setStatus(WorkOrderStatus.CANCELLED.name());
         order.setCancelledTime(now);

@@ -228,9 +228,9 @@ class WorkOrderServiceTest
     void cancellationRequiresReasonAndAddsTerminalRecord()
     {
         WorkOrderCancelRequest request = cancelRequest();
-        request.setDescription("  ");
+        request.setReason("  ");
         error(400, () -> service.cancel(9L, request));
-        request.setDescription("模拟误报取消");
+        request.setReason("模拟误报取消");
         service.cancel(9L, request);
         assertEquals("CANCELLED", order.getStatus());
         assertNotNull(order.getCancelledTime());
@@ -302,7 +302,7 @@ class WorkOrderServiceTest
     private WorkOrderCancelRequest cancelRequest()
     {
         WorkOrderCancelRequest request = new WorkOrderCancelRequest();
-        request.setVersion(0); request.setDescription("模拟取消");
+        request.setVersion(0); request.setReason("模拟取消");
         return request;
     }
 

@@ -66,7 +66,7 @@
     <el-dialog v-model="cancelOpen" title="取消待受理报修" width="560px" class="workorder-form" append-to-body :close-on-click-modal="!saving" :show-close="!saving">
       <p>{{ actionOrder.workOrderNo }} · {{ actionOrder.title }}</p>
       <el-form ref="cancelRef" :model="cancellation" :disabled="saving" label-width="90px">
-        <el-form-item label="取消原因" prop="description" :rules="[{ required: true, whitespace: true, message: '请输入取消原因', trigger: 'blur' }]"><el-input v-model="cancellation.description" type="textarea" :rows="4" maxlength="2000" show-word-limit /></el-form-item>
+        <el-form-item label="取消原因" prop="reason" :rules="[{ required: true, whitespace: true, message: '请输入取消原因', trigger: 'blur' }]"><el-input v-model="cancellation.reason" type="textarea" :rows="4" maxlength="2000" show-word-limit /></el-form-item>
       </el-form>
       <template #footer><el-button :disabled="saving" @click="cancelOpen = false">返回</el-button><el-button type="danger" :loading="saving" @click="submitCancel">确认取消报修</el-button></template>
     </el-dialog>
@@ -195,7 +195,7 @@ async function submitAssign() {
 async function openCancel(row) {
   try {
     actionOrder.value = (await getWorkOrder(row.workOrderId)).data
-    cancellation.value = { description: '' }
+    cancellation.value = { reason: '' }
     cancelOpen.value = true
     nextTick(() => proxy.$refs.cancelRef?.clearValidate())
   } catch {}
