@@ -29,14 +29,14 @@
 
 ```powershell
 Set-Location 'D:\VSCode\workspace\equipment-maintenance\equipment-backend'
-mvn -pl ruoyi-system -am test '-DskipTests=false' '-Dmaven.test.skip=false'
+mvn -pl xiaokang-system -am test '-DskipTests=false' '-Dmaven.test.skip=false'
 mvn package '-DskipTests=false' '-Dmaven.test.skip=false'
 
 Set-Location 'D:\VSCode\workspace\equipment-maintenance\equipment-frontend'
 npm.cmd run build:prod
 ```
 
-构建前须先停止占用当前JAR的后端。单元报告位于 `equipment-backend/ruoyi-system/target/surefire-reports/`。本机API结果和导出样本位于忽略提交的 `equipment-backend/ruoyi-admin/target/equipment-api-results.json` 与 `equipment-demo.xlsx`；结果文件不包含令牌或密码。
+构建前须先停止占用当前JAR的后端。单元报告位于 `equipment-backend/xiaokang-system/target/surefire-reports/`。本机API结果和导出样本位于忽略提交的 `equipment-backend/xiaokang-admin/target/equipment-api-results.json` 与 `equipment-demo.xlsx`；结果文件不包含令牌或密码。
 
 ## 浏览器验收证据
 
@@ -73,7 +73,7 @@ npm.cmd run build:prod
 | 浏览器筛选 | 已取消筛选返回3条，重置恢复5条；验收交互期间控制台无error/warn |
 | 审查 | Standards未发现可操作问题；Spec发现取消字段应为reason，已统一DTO、Service、前端和文档，并兼容description别名；两项反序列化测试及页面取消均验证修复，复查无新增问题 |
 
-35项实际API检查结果保存在忽略提交的 `equipment-backend/ruoyi-admin/target/p3-api-results.json`。后续又核对了日期/人员筛选和页面数据状态；取消的正式reason字段通过实际页面请求成功验证。临时验收上下文已去除密码与令牌。
+35项实际API检查结果保存在忽略提交的 `equipment-backend/xiaokang-admin/target/p3-api-results.json`。后续又核对了日期/人员筛选和页面数据状态；取消的正式reason字段通过实际页面请求成功验证。临时验收上下文已去除密码与令牌。
 
 实际API及浏览器验收留下明确标注模拟用途的设备、工单和动作记录，保留供演示；本次创建的模拟账号在验收后停用并登出所属测试令牌，没有修改原有正常用户。分配给模拟账号的历史保留其显示名。自行演示分配时需准备自己的启用维护账号，步骤见 `docs/work-orders.md`。
 
@@ -100,11 +100,11 @@ MySQL临时表克隆不复制正式外键，且单连接不模拟跨连接竞争
 | 审查 | 以47de9fe为固定起点，Standards与Spec分别审查，均无可操作发现；审查不替代动态验收 |
 | 页面 | 获本次P4登录与验证码授权。追加处理必填拦截正常，保存后新增时间线；原因/措施/结果分别必填，第一轮提交转待复核且维护按钮收起；退回原因必填，退回保留原维护人；第二轮重提成功，通过结论必填且确认框展示工单号，通过后显示关闭时间且仅查询；设备历史打开同一工单，两轮结果、退回原因及通过说明完整；控制台无error/warn |
 
-43项实际API检查结果在忽略提交的 `equipment-backend/ruoyi-admin/target/p4-api-results.json`。模拟设备 `EQ-P4-1015100542`，三张工单均明确标记API或UI用途；初次脚本创建的超长测试账号因若依用户名长度上限不能登录，已停用，随后按框架上限生成账号验收通过，未改动产品账号规则。
+43项实际API检查结果在忽略提交的 `equipment-backend/xiaokang-admin/target/p4-api-results.json`。模拟设备 `EQ-P4-1015100542`，三张工单均明确标记API或UI用途；初次脚本创建的超长测试账号因若依用户名长度上限不能登录，已停用，随后按框架上限生成账号验收通过，未改动产品账号规则。
 
 10项MySQL测试仍使用专用连接的临时业务表克隆，不写常规业务表，资格候选虚拟化与外键限制沿用P3说明；跨连接竞争通过实际API补充。测试连接由本机忽略提交的配置读取，仅传给测试子进程，没有将密码加入仓库或共享文档。API验收的四个单角色模拟账号及页面验收的双角色模拟账号均已停用，测试会话全部登出；本地上下文已移除密码和令牌，模拟业务记录保留供演示。页面使用双角色账号验证同一组件的操作与显示，角色隔离另由单角色API验收覆盖。
 
-页面工单 `WO-55c153fa535443fe88e04749a3f60331`，2026-10-15 11:41:50通过关闭，version=6，共7条动作记录。保存后通过接口再次核对两轮结果和设备状态；本地验收摘要 `equipment-backend/ruoyi-admin/target/p4-ui-results.json`，不含密码或令牌。
+页面工单 `WO-55c153fa535443fe88e04749a3f60331`，2026-10-15 11:41:50通过关闭，version=6，共7条动作记录。保存后通过接口再次核对两轮结果和设备状态；本地验收摘要 `equipment-backend/xiaokang-admin/target/p4-ui-results.json`，不含密码或令牌。
 
 ![P4关闭状态与最近一轮处理结果](evidence/workorder-closed-20261015.png)
 
@@ -133,7 +133,7 @@ MySQL临时表克隆不复制正式外键，且单连接不模拟跨连接竞争
 | 浏览器导出 | 搜索已关闭模拟工单只剩1条，点击导出成功。解析实际下载XLSX共2行（表头+1条），16列、编号匹配，电气/普通/已关闭标签和关闭时间正确，无公式单元格 |
 | 控制台与审查 | 验收期间控制台error/warn为空。Standards与Spec独立审查共同发现一项图表实例生命周期P2问题，已修复并通过聚焦复查；无剩余可操作发现 |
 
-46项P5实际API检查结果位于忽略提交的 `equipment-backend/ruoyi-admin/target/p5-api-results.json`，浏览器摘要为 `p5-ui-results.json`；后端测试日志为 `equipment-backend/target-p5-package.log`，前端构建日志为 `equipment-frontend/target-p5-build.log`。日志与下载样本不提交Git。
+46项P5实际API检查结果位于忽略提交的 `equipment-backend/xiaokang-admin/target/p5-api-results.json`，浏览器摘要为 `p5-ui-results.json`；后端测试日志为 `equipment-backend/target-p5-package.log`，前端构建日志为 `equipment-frontend/target-p5-build.log`。日志与下载样本不提交Git。
 
 本次模拟设备 `EQ-P5-A-1015151303`（混合状态）、`EQ-P5-B-1015151303`（仅取消）、`EQ-P5-C-1015151303`（无工单）。页面导出工单为 `WO-2a3eab7b60b64511b7bea3f28e789046`；实际文件位于本机 `Downloads/workorders_1792049158054.xlsx`。数据仅用于学习验证，不代表真实设备成效。
 

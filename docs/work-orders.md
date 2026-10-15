@@ -35,7 +35,7 @@ P3完成创建、查询、分配和取消；P4补齐处理记录追加、提交�
 ```powershell
 Set-Location 'D:\VSCode\workspace\equipment-maintenance\equipment-backend'
 mvn package '-DskipTests=false' '-Dmaven.test.skip=false'
-java '-Duser.timezone=Asia/Shanghai' -jar '.\ruoyi-admin\target\ruoyi-admin.jar'
+java '-Duser.timezone=Asia/Shanghai' -jar '.\xiaokang-admin\target\xiaokang-admin.jar'
 ```
 
 前端仍使用原有 `npm.cmd run dev -- --host 127.0.0.1 --port 5173`。P3前端新增详情组件，无需额外安装前端依赖。
@@ -83,7 +83,7 @@ $env:EQ_MYSQL_TEST_USER = 'equipment_dev'
 $taskTestPassword = Read-Host '输入测试连接密码' -AsSecureString
 $env:EQ_MYSQL_TEST_PASSWORD = [System.Net.NetworkCredential]::new('', $taskTestPassword).Password
 try {
-    mvn -pl ruoyi-system -am test '-DskipTests=false' '-Dmaven.test.skip=false'
+    mvn -pl xiaokang-system -am test '-DskipTests=false' '-Dmaven.test.skip=false'
 } finally {
     $env:EQ_MYSQL_TEST_PASSWORD = $null
     $env:EQ_MYSQL_TEST_USER = $null

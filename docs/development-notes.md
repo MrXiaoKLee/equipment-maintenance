@@ -9,7 +9,7 @@
 修正命令：
 
 ```powershell
-java '-Duser.timezone=Asia/Shanghai' -jar '.\ruoyi-admin\target\ruoyi-admin.jar'
+java '-Duser.timezone=Asia/Shanghai' -jar '.\xiaokang-admin\target\xiaokang-admin.jar'
 ```
 
 验证：未加引号的 `java -Duser.timezone=Asia/Shanghai -version` 返回主类错误；加引号后执行 `-XshowSettings:properties -version` 返回 `user.timezone = Asia/Shanghai`。此修正不需要重新打包。
@@ -22,7 +22,7 @@ java '-Duser.timezone=Asia/Shanghai' -jar '.\ruoyi-admin\target\ruoyi-admin.jar'
 
 修正：后端 `application.yml` 的Redis主机使用 `${EQ_REDIS_HOST:127.0.0.1}`，端口使用 `${EQ_REDIS_PORT:6399}`，密码使用 `${EQ_REDIS_PASSWORD:}`。保留原本地Redis服务设置。
 
-验证：向实际6399端口发送PING，收到PONG；执行 `mvn package` 返回BUILD SUCCESS，新JAR配置已更新。用户重新启动后，日志显示数据库查询成功、Started RuoYiApplication及若依启动成功。后续用户已确认前端登录成功。
+验证：向实际6399端口发送PING，收到PONG；执行 `mvn package` 返回BUILD SUCCESS，新JAR配置已更新。用户重新启动后，日志显示数据库查询成功、Started RuoYiApplication及若依启动成功。后续用户已确认前端登录成功。此处记录改名前的日志，当前入口和命令见 [命名调整](xiaokang-rename.md)。
 
 ## 2026年10月14日 恢复直接数据库配置
 

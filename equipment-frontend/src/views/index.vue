@@ -2,7 +2,7 @@
   <div class="app-container project-home">
     <header>
       <p class="version">v0.1.0 · 本地演示</p>
-      <h1>设备故障与维护记录管理系统</h1>
+      <h1>XiaoKang · 设备故障与维护记录管理系统</h1>
       <p>登记设备，跟踪故障处理，保留每轮结果与复核记录。</p>
     </header>
     <el-alert title="设备、工单及处理结果均为模拟演示数据，不代表真实设备运行或维修成效。" type="info" :closable="false" />
@@ -34,7 +34,8 @@
       <p>列表与导出只展示本人角色范围内的记录。已提交的每轮结果保留在时间线中。</p>
     </section>
     <footer>
-      基于 <a href="https://github.com/yangzongzhuan/RuoYi-Vue" target="_blank" rel="noopener noreferrer">RuoYi 3.9.2</a> 开发，复用登录、用户、角色、菜单及通用管理能力。
+      XiaoKang 设备维护管理应用 · 登录、用户、角色、菜单及通用管理能力复用
+      <a href="https://github.com/yangzongzhuan/RuoYi-Vue" target="_blank" rel="noopener noreferrer">开源基座</a>。
     </footer>
   </div>
 </template>

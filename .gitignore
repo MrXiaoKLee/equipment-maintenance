@@ -13,7 +13,7 @@
 /uploads/
 
 # Local credentials and machine-specific configuration
-/equipment-backend/ruoyi-admin/src/main/resources/application-druid.yml
+/equipment-backend/xiaokang-admin/src/main/resources/application-druid.yml
 .env.local
 .env.*.local
 **/application-local.yml

@@ -1,6 +1,8 @@
-# 设备故障与维护记录管理系统
+# XiaoKang · 设备故障与维护记录管理系统
 
 Equipment Fault and Maintenance Management System
+
+当前项目标识为 `XiaoKang`，Java 包名为 `com.xiaokang`，后端模块目录为 `xiaokang-*`。完整改名说明、已有库升级及新启动命令见 [命名调整](docs/xiaokang-rename.md)。上游来源与许可证保留在 [第三方说明](THIRD_PARTY_NOTICES.md)。
 
 本项目面向实验室设备管理场景，基于 Java 和若依开源后台实现设备台账、故障报修、维护处理、结果复核、历史追溯及基础统计功能。使用人员可以记录问题，维护人员可以跟踪处理，管理人员可以复核结果，并保留可查询的处理过程。
 
@@ -335,7 +337,7 @@ MySQL保存设备、工单、记录、用户和权限。Redis满足框架登录�
 
 ## 7 目录与代码组织
 
-当前结构如下。代码精简后业务迁移为001至007，历史v0.1.0交付以该Git标签为准。
+当前结构如下。业务迁移为001至008，历史v0.1.0交付以该Git标签为准。
 
 ```text
 equipment-maintenance/
@@ -345,10 +347,10 @@ equipment-maintenance/
 ├── equipment-backend/
 │   ├── LICENSE
 │   ├── pom.xml
-│   ├── ruoyi-admin/
-│   ├── ruoyi-system/
-│   ├── ruoyi-framework/
-│   ├── ruoyi-common/
+│   ├── xiaokang-admin/
+│   ├── xiaokang-system/
+│   ├── xiaokang-framework/
+│   ├── xiaokang-common/
 │   └── sql/                        # 保留上游脚本及来源
 ├── equipment-frontend/
 │   ├── LICENSE
@@ -364,7 +366,8 @@ equipment-maintenance/
 │   ├── 004_work_order_dict_menu.sql
 │   ├── 005_work_order_process_review_menu.sql
 │   ├── 006_statistics_export_menu.sql
-│   └── 007_remove_unused_module_menus.sql
+│   ├── 007_remove_unused_module_menus.sql
+│   └── 008_xiaokang_branding.sql
 ├── scripts/
 │   ├── initialize_database.py
 │   └── seed_demo.py
@@ -386,11 +389,11 @@ equipment-maintenance/
 
 | 内容 | 规划位置 |
 | --- | --- |
-| Controller | `ruoyi-admin/src/main/java/com/ruoyi/web/controller/equipment/` |
-| 领域类、DTO、VO | `ruoyi-system/src/main/java/com/ruoyi/equipment/` 下 `domain/`、`dto/`、`vo/` |
+| Controller | `xiaokang-admin/src/main/java/com/xiaokang/web/controller/equipment/` |
+| 领域类、DTO、VO | `xiaokang-system/src/main/java/com/xiaokang/equipment/` 下 `domain/`、`dto/`、`vo/` |
 | Service | 同业务包下 `service/` 及实现 |
 | Mapper接口 | 同业务包下 `mapper/` |
-| Mapper XML | `ruoyi-system/src/main/resources/mapper/equipment/` |
+| Mapper XML | `xiaokang-system/src/main/resources/mapper/equipment/` |
 | 状态枚举 | 同业务包下 `enums/` |
 | 测试 | 对应模块 `src/test/java/` |
 
@@ -716,11 +719,11 @@ CREATE DATABASE equipment_maintenance
 Get-ChildItem -LiteralPath '.\equipment-backend\sql' -Filter '*.sql'
 ```
 
-在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`、`007_remove_unused_module_menus.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
+在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`、`007_remove_unused_module_menus.sql`、`008_xiaokang_branding.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
 
 ### 11.4 后端配置
 
-本地开发维持若依原版的直接配置形式。主库连接信息写在 `equipment-backend/ruoyi-admin/src/main/resources/application-druid.yml`，启动时自动读取，不需要先运行输入密码或设置环境变量的命令。
+本地开发维持若依原版的直接配置形式。主库连接信息写在 `equipment-backend/xiaokang-admin/src/main/resources/application-druid.yml`，启动时自动读取，不需要先运行输入密码或设置环境变量的命令。
 
 当前本地配置使用 `localhost:3306/equipment_maintenance`、用户 `equipment_dev`，密码已填写为经过MySQL连接验证的值。下列示例只表示格式，不展示真实密码，也不要用占位文字覆盖已经配置好的文件：
 
@@ -742,7 +745,7 @@ spring:
 
 Redis保持已经验证的本机连接配置，默认地址为 `127.0.0.1:6399`、密码为空；其可选环境变量保留，不要求日常设置。Token密钥仍是后续本地配置事项。
 
-`ruoyi.profile` 使用项目外可写目录，例如 `D:/VSCode/local-data/equipment-maintenance/uploads`。第一版无业务附件，框架配置仍有效。JVM、JDBC和JSON日期设置遵守统一时区。
+`xiaokang.profile` 使用项目外可写目录，例如 `D:/VSCode/local-data/equipment-maintenance/uploads`。第一版无业务附件，框架配置仍有效。JVM、JDBC和JSON日期设置遵守统一时区。
 
 ### 11.5 前端配置
 
@@ -769,10 +772,10 @@ Set-Location -LiteralPath 'D:\VSCode\workspace\equipment-maintenance\equipment-b
 mvn clean package
 ```
 
-确认本地数据库配置后，在VS Code运行 `ruoyi-admin` 中 `com.ruoyi.RuoYiApplication`，或执行打包应用：
+确认本地数据库配置后，在VS Code运行 `xiaokang-admin` 中 `com.xiaokang.XiaoKangApplication`，或执行打包应用：
 
 ```powershell
-java '-Duser.timezone=Asia/Shanghai' -jar '.\ruoyi-admin\target\ruoyi-admin.jar'
+java '-Duser.timezone=Asia/Shanghai' -jar '.\xiaokang-admin\target\xiaokang-admin.jar'
 ```
 
 JAR名称以固定基线为准。浏览器访问 `http://127.0.0.1:5173`，8080为后端接口。首次登录使用所选上游文档中的初始账号，随后修改密码并创建业务账号，不固定真实密码到项目文档。
@@ -792,7 +795,7 @@ npm run build:prod
 - [x] 基座SHA和环境版本已记录。
 - [x] 31张框架表已导入，后端启动时数据库查询成功。
 - [x] 本机Redis `127.0.0.1:6399` 连通，PING返回PONG。
-- [x] 后端日志显示Started RuoYiApplication及若依启动成功。
+- [x] 后端日志显示Started XiaoKangApplication及若依启动成功。
 - [x] 原版登录正常，用户已确认。
 - [x] 代理、端口一致，登录后菜单加载。
 - [x] 日志无持续连接或映射错误。

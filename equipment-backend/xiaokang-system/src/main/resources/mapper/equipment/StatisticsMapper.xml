@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaokang.equipment.mapper.StatisticsMapper">
+    <sql id="OrderFilter">
+        <if test="equipmentId != null">AND w.equipment_id=#{equipmentId}</if>
+        <if test="beginTime != null">AND w.create_time &gt;= #{beginTime}</if>
+        <if test="endTime != null">AND w.create_time &lt; #{endTime}</if>
+    </sql>
+    <select id="selectEquipmentStatuses" resultType="com.xiaokang.equipment.vo.CountBucket">
+        SELECT equipment_status AS code,COUNT(*) AS count FROM eq_equipment GROUP BY equipment_status
+    </select>
+    <select id="selectSummary" resultType="com.xiaokang.equipment.vo.StatisticsOverview">
+        SELECT COUNT(*) AS orderTotal,
+            COALESCE(SUM(w.status IN ('WAITING','PROCESSING','PENDING_REVIEW')),0) AS openOrderCount,
+            COALESCE(SUM(w.status='CLOSED'),0) AS closedOrderCount,
+            ROUND(AVG(CASE WHEN w.status='CLOSED' THEN TIMESTAMPDIFF(SECOND,w.create_time,w.closed_time)/3600.0 END),2) AS averageClosedHours
+        FROM eq_work_order w WHERE 1=1 <include refid="OrderFilter"/>
+    </select>
+    <select id="selectOrderStatuses" resultType="com.xiaokang.equipment.vo.CountBucket">
+        SELECT w.status AS code,COUNT(*) AS count FROM eq_work_order w
+        WHERE 1=1 <include refid="OrderFilter"/> GROUP BY w.status
+    </select>
+    <select id="selectFaultCategories" resultType="com.xiaokang.equipment.vo.CountBucket">
+        SELECT w.fault_category AS code,COUNT(*) AS count FROM eq_work_order w
+        WHERE w.status!='CANCELLED' <include refid="OrderFilter"/>
+        GROUP BY w.fault_category ORDER BY count DESC,w.fault_category
+    </select>
+    <select id="selectTopEquipment" resultType="com.xiaokang.equipment.vo.EquipmentReportCount">
+        SELECT e.equipment_id AS equipmentId,e.equipment_code AS equipmentCode,e.equipment_name AS equipmentName,COUNT(*) AS count
+        FROM eq_work_order w JOIN eq_equipment e ON e.equipment_id=w.equipment_id
+        WHERE w.status!='CANCELLED' <include refid="OrderFilter"/>
+        GROUP BY e.equipment_id,e.equipment_code,e.equipment_name
+        ORDER BY count DESC,e.equipment_code LIMIT 10
+    </select>
+</mapper>

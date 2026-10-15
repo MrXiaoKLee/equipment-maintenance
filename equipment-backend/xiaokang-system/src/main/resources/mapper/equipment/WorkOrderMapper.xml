@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaokang.equipment.mapper.WorkOrderMapper">
+    <resultMap id="Order" type="com.xiaokang.equipment.domain.WorkOrder">
+        <id property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="equipmentId" column="equipment_id"/>
+        <result property="equipmentCode" column="equipment_code"/>
+        <result property="equipmentName" column="equipment_name"/>
+        <result property="title" column="title"/>
+        <result property="symptom" column="symptom"/>
+        <result property="faultCategory" column="fault_category"/>
+        <result property="priority" column="priority"/>
+        <result property="occurredTime" column="occurred_time"/>
+        <result property="reporterId" column="reporter_id"/>
+        <result property="reporterName" column="reporter_name"/>
+        <result property="handlerId" column="handler_id"/>
+        <result property="handlerName" column="handler_name"/>
+        <result property="status" column="status"/>
+        <result property="assignedTime" column="assigned_time"/>
+        <result property="lastSubmitTime" column="last_submit_time"/>
+        <result property="closedTime" column="closed_time"/>
+        <result property="cancelledTime" column="cancelled_time"/>
+        <result property="version" column="version"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+    <resultMap id="Record" type="com.xiaokang.equipment.domain.WorkOrderRecord">
+        <id property="recordId" column="record_id"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="actionType" column="action_type"/>
+        <result property="fromStatus" column="from_status"/>
+        <result property="toStatus" column="to_status"/>
+        <result property="description" column="description"/>
+        <result property="causeAnalysis" column="cause_analysis"/>
+        <result property="measures" column="measures"/>
+        <result property="resultDescription" column="result_description"/>
+        <result property="actorId" column="actor_id"/>
+        <result property="actorName" column="actor_name"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <resultMap id="Maintainer" type="com.xiaokang.equipment.vo.MaintainerOption">
+        <id property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="nickName" column="nick_name"/>
+    </resultMap>
+    <sql id="Scope">
+        <if test="!actor.manager">
+            AND (1 = 0
+                <if test="actor.reporter">OR w.reporter_id = #{actor.userId}</if>
+                <if test="actor.maintainer">OR w.handler_id = #{actor.userId}</if>
+            )
+        </if>
+    </sql>
+    <sql id="JoinedOrder">
+        SELECT w.*, e.equipment_code, e.equipment_name, r.nick_name AS reporter_name, h.nick_name AS handler_name
+        FROM eq_work_order w JOIN eq_equipment e ON e.equipment_id = w.equipment_id
+        LEFT JOIN sys_user r ON r.user_id = w.reporter_id
+        LEFT JOIN sys_user h ON h.user_id = w.handler_id
+    </sql>
+    <sql id="FilteredOrders">
+        <include refid="JoinedOrder"/>
+        WHERE 1 = 1
+        <include refid="Scope"/>
+        <if test="query.workOrderNo != null and query.workOrderNo != ''">AND w.work_order_no LIKE concat('%', #{query.workOrderNo}, '%')</if>
+        <if test="query.equipmentId != null">AND w.equipment_id = #{query.equipmentId}</if>
+        <if test="query.status != null and query.status != ''">AND w.status = #{query.status}</if>
+        <if test="query.faultCategory != null and query.faultCategory != ''">AND w.fault_category = #{query.faultCategory}</if>
+        <if test="query.priority != null and query.priority != ''">AND w.priority = #{query.priority}</if>
+        <if test="query.reporterId != null">AND w.reporter_id = #{query.reporterId}</if>
+        <if test="query.handlerId != null">AND w.handler_id = #{query.handlerId}</if>
+        <if test="query.reporterName != null and query.reporterName != ''">AND (r.nick_name LIKE concat('%',#{query.reporterName},'%') OR r.user_name LIKE concat('%',#{query.reporterName},'%'))</if>
+        <if test="query.handlerName != null and query.handlerName != ''">AND (h.nick_name LIKE concat('%',#{query.handlerName},'%') OR h.user_name LIKE concat('%',#{query.handlerName},'%'))</if>
+        <if test="query.beginTime != null">AND w.create_time &gt;= #{query.beginTime}</if>
+        <if test="query.endTime != null">AND w.create_time &lt; #{query.endTime}</if>
+        <if test="query.openOnly != null and query.openOnly">AND w.status IN ('WAITING','PROCESSING','PENDING_REVIEW')</if>
+        ORDER BY w.create_time DESC, w.work_order_id DESC
+    </sql>
+    <select id="selectList" resultMap="Order"><include refid="FilteredOrders"/></select>
+    <select id="selectExportList" resultMap="Order"><include refid="FilteredOrders"/> LIMIT 1001</select>
+    <select id="selectById" resultMap="Order">
+        <include refid="JoinedOrder"/> WHERE w.work_order_id = #{id}
+    </select>
+    <select id="lockById" resultMap="Order">
+        SELECT * FROM eq_work_order WHERE work_order_id = #{id} FOR UPDATE
+    </select>
+    <select id="countVisibleOpen" resultType="int">
+        SELECT count(*) FROM eq_work_order w WHERE w.equipment_id = #{equipmentId}
+        AND w.status IN ('WAITING','PROCESSING','PENDING_REVIEW')
+        <include refid="Scope"/>
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="workOrderId">
+        INSERT INTO eq_work_order (work_order_no,equipment_id,title,symptom,fault_category,priority,
+            occurred_time,reporter_id,status,version,create_by,create_time)
+        VALUES (#{workOrderNo},#{equipmentId},#{title},#{symptom},#{faultCategory},#{priority},
+            #{occurredTime},#{reporterId},#{status},#{version},#{createBy},#{createTime})
+    </insert>
+    <update id="assign">
+        UPDATE eq_work_order SET handler_id=#{handlerId},status=#{status},assigned_time=#{assignedTime},
+            version=version+1,update_by=#{updateBy},update_time=#{updateTime}
+        WHERE work_order_id=#{workOrderId} AND version=#{version} AND status='WAITING'
+    </update>
+    <update id="cancel">
+        UPDATE eq_work_order SET status=#{status},cancelled_time=#{cancelledTime},
+            version=version+1,update_by=#{updateBy},update_time=#{updateTime}
+        WHERE work_order_id=#{workOrderId} AND version=#{version} AND status='WAITING'
+    </update>
+    <update id="updateWorkflow">
+        UPDATE eq_work_order SET status=#{order.status},last_submit_time=#{order.lastSubmitTime},
+            closed_time=#{order.closedTime},version=version+1,
+            update_by=#{order.updateBy},update_time=#{order.updateTime}
+        WHERE work_order_id=#{order.workOrderId} AND version=#{order.version} AND status=#{fromStatus}
+        <if test="handlerId != null">AND handler_id=#{handlerId}</if>
+    </update>
+    <insert id="insertRecord" useGeneratedKeys="true" keyProperty="recordId">
+        INSERT INTO eq_work_order_record (work_order_id,action_type,from_status,to_status,description,
+            cause_analysis,measures,result_description,actor_id,actor_name,create_time)
+        VALUES (#{workOrderId},#{actionType},#{fromStatus},#{toStatus},#{description},
+            #{causeAnalysis},#{measures},#{resultDescription},#{actorId},#{actorName},#{createTime})
+    </insert>
+    <select id="selectRecords" resultMap="Record">
+        SELECT * FROM eq_work_order_record WHERE work_order_id=#{id} ORDER BY create_time,record_id
+    </select>
+    <sql id="EligibleMaintainer">
+        u.status='0' AND u.del_flag='0' AND EXISTS (
+            SELECT 1 FROM sys_user_role ur JOIN sys_role r ON r.role_id=ur.role_id
+            WHERE ur.user_id=u.user_id AND r.role_key='eq_maintainer' AND r.status='0' AND r.del_flag='0'
+        )
+    </sql>
+    <select id="selectMaintainers" resultMap="Maintainer">
+        SELECT u.user_id,u.user_name,u.nick_name FROM sys_user u WHERE <include refid="EligibleMaintainer"/>
+        <if test="keyword != null and keyword != ''">AND (u.user_name LIKE concat('%',#{keyword},'%') OR u.nick_name LIKE concat('%',#{keyword},'%'))</if>
+        ORDER BY u.user_id
+    </select>
+    <select id="lockMaintainer" resultMap="Maintainer">
+        SELECT u.user_id,u.user_name,u.nick_name FROM sys_user u WHERE u.user_id=#{id}
+        AND <include refid="EligibleMaintainer"/> FOR UPDATE
+    </select>
+</mapper>

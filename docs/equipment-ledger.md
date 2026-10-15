@@ -26,7 +26,7 @@
 ```powershell
 Set-Location 'D:\VSCode\workspace\equipment-maintenance\equipment-backend'
 mvn package '-DskipTests=false' '-Dmaven.test.skip=false'
-java '-Duser.timezone=Asia/Shanghai' -jar '.\ruoyi-admin\target\ruoyi-admin.jar'
+java '-Duser.timezone=Asia/Shanghai' -jar '.\xiaokang-admin\target\xiaokang-admin.jar'
 ```
 
 前端开发服务仍使用：
@@ -70,10 +70,10 @@ HTTP状态与JSON业务码沿用若依约定：成功200、参数400、权限403
 
 | 内容 | 项目内位置 |
 | --- | --- |
-| Controller | `equipment-backend/ruoyi-admin/src/main/java/com/ruoyi/web/controller/equipment/EquipmentController.java` |
-| 领域对象、请求、Service、Mapper接口 | `equipment-backend/ruoyi-system/src/main/java/com/ruoyi/equipment/` |
-| SQL映射 | `equipment-backend/ruoyi-system/src/main/resources/mapper/equipment/EquipmentMapper.xml` |
-| Service测试 | `equipment-backend/ruoyi-system/src/test/java/com/ruoyi/equipment/service/EquipmentServiceTest.java` |
+| Controller | `equipment-backend/xiaokang-admin/src/main/java/com/xiaokang/web/controller/equipment/EquipmentController.java` |
+| 领域对象、请求、Service、Mapper接口 | `equipment-backend/xiaokang-system/src/main/java/com/xiaokang/equipment/` |
+| SQL映射 | `equipment-backend/xiaokang-system/src/main/resources/mapper/equipment/EquipmentMapper.xml` |
+| Service测试 | `equipment-backend/xiaokang-system/src/test/java/com/xiaokang/equipment/service/EquipmentServiceTest.java` |
 | 前端API | `equipment-frontend/src/api/equipment/asset.js` |
 | 台账页面 | `equipment-frontend/src/views/equipment/asset/index.vue` |
 

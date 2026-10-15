@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaokang.equipment.mapper.EquipmentMapper">
+    <resultMap id="EquipmentResult" type="com.xiaokang.equipment.domain.Equipment">
+        <id property="equipmentId" column="equipment_id"/>
+        <result property="equipmentCode" column="equipment_code"/>
+        <result property="equipmentName" column="equipment_name"/>
+        <result property="equipmentType" column="equipment_type"/>
+        <result property="model" column="model"/>
+        <result property="location" column="location"/>
+        <result property="equipmentStatus" column="equipment_status"/>
+        <result property="version" column="version"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+    <resultMap id="HistoryResult" type="com.xiaokang.equipment.vo.EquipmentWorkOrder">
+        <id property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="title" column="title"/>
+        <result property="symptom" column="symptom"/>
+        <result property="faultCategory" column="fault_category"/>
+        <result property="priority" column="priority"/>
+        <result property="status" column="status"/>
+        <result property="reporterName" column="reporter_name"/>
+        <result property="handlerName" column="handler_name"/>
+        <result property="occurredTime" column="occurred_time"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <sql id="Columns">
+        equipment_id, equipment_code, equipment_name, equipment_type, model, location,
+        equipment_status, version, create_by, create_time, update_by, update_time, remark
+    </sql>
+    <sql id="Filters">
+        <where>
+            <if test="equipmentCode != null and equipmentCode != ''">AND equipment_code LIKE concat('%', #{equipmentCode}, '%')</if>
+            <if test="equipmentName != null and equipmentName != ''">AND equipment_name LIKE concat('%', #{equipmentName}, '%')</if>
+            <if test="equipmentType != null and equipmentType != ''">AND equipment_type = #{equipmentType}</if>
+            <if test="equipmentStatus != null and equipmentStatus != ''">AND equipment_status = #{equipmentStatus}</if>
+            <if test="keyword != null and keyword != ''">AND (equipment_code LIKE concat('%', #{keyword}, '%') OR equipment_name LIKE concat('%', #{keyword}, '%'))</if>
+        </where>
+    </sql>
+    <select id="selectList" resultMap="EquipmentResult">
+        SELECT <include refid="Columns"/> FROM eq_equipment
+        <include refid="Filters"/> ORDER BY equipment_id DESC
+    </select>
+    <select id="selectExportList" resultMap="EquipmentResult">
+        SELECT <include refid="Columns"/> FROM eq_equipment
+        <include refid="Filters"/> ORDER BY equipment_id DESC LIMIT 1001
+    </select>
+    <select id="selectById" resultMap="EquipmentResult">
+        SELECT <include refid="Columns"/> FROM eq_equipment WHERE equipment_id = #{id}
+    </select>
+    <select id="lockById" resultMap="EquipmentResult">
+        SELECT <include refid="Columns"/> FROM eq_equipment WHERE equipment_id = #{id} FOR UPDATE
+    </select>
+    <select id="selectByCode" resultMap="EquipmentResult">
+        SELECT <include refid="Columns"/> FROM eq_equipment WHERE equipment_code = #{code}
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="equipmentId">
+        INSERT INTO eq_equipment (equipment_code, equipment_name, equipment_type, model, location,
+            equipment_status, version, create_by, create_time, remark)
+        VALUES (#{equipmentCode}, #{equipmentName}, #{equipmentType}, #{model}, #{location},
+            #{equipmentStatus}, #{version}, #{createBy}, #{createTime}, #{remark})
+    </insert>
+    <update id="update">
+        UPDATE eq_equipment SET equipment_name = #{equipmentName}, equipment_type = #{equipmentType},
+            model = #{model}, location = #{location}, remark = #{remark}, version = version + 1,
+            update_by = #{updateBy}, update_time = #{updateTime}
+        WHERE equipment_id = #{equipmentId} AND version = #{version}
+    </update>
+    <update id="updateStatus">
+        UPDATE eq_equipment SET equipment_status = #{equipmentStatus}, version = version + 1,
+            update_by = #{updateBy}, update_time = #{updateTime}
+        WHERE equipment_id = #{equipmentId} AND version = #{version}
+    </update>
+    <select id="countOpenWorkOrders" resultType="int">
+        SELECT count(*) FROM eq_work_order WHERE equipment_id = #{id}
+        AND status IN ('WAITING', 'PROCESSING', 'PENDING_REVIEW')
+    </select>
+    <select id="selectHistory" resultMap="HistoryResult">
+        SELECT w.work_order_id, w.work_order_no, w.title, w.symptom, w.fault_category, w.priority,
+            w.status, w.occurred_time, w.create_time, r.nick_name AS reporter_name, h.nick_name AS handler_name
+        FROM eq_work_order w
+        LEFT JOIN sys_user r ON r.user_id = w.reporter_id
+        LEFT JOIN sys_user h ON h.user_id = w.handler_id
+        WHERE w.equipment_id = #{id}
+        <if test="!all">
+            AND (1 = 0
+                <if test="reporter">OR w.reporter_id = #{userId}</if>
+                <if test="maintainer">OR w.handler_id = #{userId}</if>
+            )
+        </if>
+        ORDER BY w.create_time DESC, w.work_order_id DESC
+    </select>
+</mapper>

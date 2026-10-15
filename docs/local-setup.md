@@ -44,7 +44,7 @@ python '.\scripts\initialize_database.py' --user equipment_demo --database equip
 脚本仅此次提示数据库密码，执行完临时连接配置即释放；这不改变日常直接配置的启动方式。默认连接本机3306，可传 `--port 3307`。它先确认目标库存在且完全为空，再依次导入：
 
 1. 固定上游 `equipment-backend/sql/ry_20260417.sql`、`quartz.sql`。
-2. 业务 `sql/001_business_schema.sql` 至 `007_remove_unused_module_menus.sql`。007停用精简代码后不再提供的功能菜单。
+2. 业务 `sql/001_business_schema.sql` 至 `008_xiaokang_branding.sql`。007停用精简代码后不再提供的功能菜单；008替换上游默认昵称和部门显示名称。
 3. 核对最终34张基础表，此时没有业务设备和工单。
 
 框架SQL包含删除并重建框架表的语句，因此脚本遇到非空库会拒绝，不能当升级脚本使用。导入中断时DDL可能已经提交，脚本不自动删表或重建库；先检查报错及独立演示库，另建新的空库重试。已有项目升级只执行尚未执行的编号业务迁移。
@@ -56,9 +56,9 @@ python '.\scripts\initialize_database.py' --user equipment_demo --database equip
 仅在新的源码副本、且目标文件不存在时复制共享模板：
 
 ```powershell
-$taskConfig = '.\equipment-backend\ruoyi-admin\src\main\resources\application-druid.yml'
+$taskConfig = '.\equipment-backend\xiaokang-admin\src\main\resources\application-druid.yml'
 if (Test-Path -LiteralPath $taskConfig) { throw '本地配置已存在，请直接检查，不要覆盖。' }
-Copy-Item '.\equipment-backend\ruoyi-admin\src\main\resources\application-druid.example.yml' $taskConfig
+Copy-Item '.\equipment-backend\xiaokang-admin\src\main\resources\application-druid.example.yml' $taskConfig
 ```
 
 在VS Code编辑该文件的 `spring.datasource.druid.master`：URL中的主机、端口和数据库名，以及username/password。完整格式保持模板原样。日常启动自动读取该文件，无须每个终端输入数据库密码。
@@ -69,7 +69,7 @@ Copy-Item '.\equipment-backend\ruoyi-admin\src\main\resources\application-druid.
 | --- | --- | --- |
 | `server.port` | 8080 | 8081 |
 | `spring.data.redis.host/port/database` | 127.0.0.1 / 6399 / 0 | 独立Redis 127.0.0.1 / 6400 / 0 |
-| `ruoyi.profile` | 可写上传目录 | 独立验收目录下uploads |
+| `xiaokang.profile` | 可写上传目录 | 独立验收目录下uploads |
 | `token.secret` | 框架默认值仍需按实际使用场景配置 | 独立副本使用本机生成值 |
 
 同机并行应用应配置独立Redis，不能清空正常开发Redis。P6复现启动了已安装MySQL与Redis的独立进程，不新装服务、不更改原Windows服务，也不修改正常库账号授权。独立实例的端口只是验收安排，并非日常启动要求。
@@ -81,12 +81,12 @@ Copy-Item '.\equipment-backend\ruoyi-admin\src\main\resources\application-druid.
 ```powershell
 Set-Location 'D:\VSCode\workspace\equipment-maintenance\equipment-backend'
 mvn clean package '-DskipTests=false' '-Dmaven.test.skip=false'
-java '-Duser.timezone=Asia/Shanghai' -jar '.\ruoyi-admin\target\ruoyi-admin.jar'
+java '-Duser.timezone=Asia/Shanghai' -jar '.\xiaokang-admin\target\xiaokang-admin.jar'
 ```
 
 未显式配置MySQL测试连接时，71项单元执行，14项MySQL测试跳过；P6验收提供独立测试连接，85项全部执行并通过。测试变量仅测试时使用，见 `docs/work-orders.md`，不加入日常启动前置步骤。
 
-看到 `Started RuoYiApplication` 后保持终端打开。关闭后端时在该终端按Ctrl+C；修改源码配置后应停止旧后端、重新打包再启动。项目根目录与后端目录不同，在根目录直接使用 `ruoyi-admin/target/...` 会找不到JAR。
+看到 `Started XiaoKangApplication` 后保持终端打开。关闭后端时在该终端按Ctrl+C；修改源码配置后应停止旧后端、重新打包再启动。项目根目录与后端目录不同，在根目录直接使用 `xiaokang-admin/target/...` 会找不到JAR。
 
 ## 4. 安装与启动前端
 
