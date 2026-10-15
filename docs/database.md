@@ -12,7 +12,8 @@
 6. 执行 `sql/006_statistics_export_menu.sql`，新增统计页面及工单导出权限。
 7. 执行 `sql/007_remove_unused_module_menus.sql` 停用已移除功能的菜单。
 8. 执行 `sql/008_xiaokang_branding.sql` 替换仍保持上游默认值的昵称和部门显示名称。
-9. 重启后端并重新登录，加载字典、菜单及权限。
+9. 执行 `sql/009_hide_upstream_website_menu.sql` 停用左侧上游官网入口。
+10. 重启后端并重新登录，加载字典、菜单及权限。
 
 本机已完成P2至P5迁移，原版31表加三张业务表共34表。业务脚本无DROP/TRUNCATE，菜单脚本重复执行不重复新增，也不重置已有配置。`CREATE TABLE IF NOT EXISTS`仅处理缺失表，后续结构升级新增编号脚本，不能以重跑001代替迁移。
 

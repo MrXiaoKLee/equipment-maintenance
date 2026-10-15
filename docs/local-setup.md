@@ -44,7 +44,7 @@ python '.\scripts\initialize_database.py' --user equipment_demo --database equip
 脚本仅此次提示数据库密码，执行完临时连接配置即释放；这不改变日常直接配置的启动方式。默认连接本机3306，可传 `--port 3307`。它先确认目标库存在且完全为空，再依次导入：
 
 1. 固定上游 `equipment-backend/sql/ry_20260417.sql`、`quartz.sql`。
-2. 业务 `sql/001_business_schema.sql` 至 `008_xiaokang_branding.sql`。007停用精简代码后不再提供的功能菜单；008替换上游默认昵称和部门显示名称。
+2. 业务 `sql/001_business_schema.sql` 至 `009_hide_upstream_website_menu.sql`。007停用精简代码后不再提供的功能菜单；008替换上游默认昵称和部门显示名称；009停用左侧上游官网入口。
 3. 核对最终34张基础表，此时没有业务设备和工单。
 
 框架SQL包含删除并重建框架表的语句，因此脚本遇到非空库会拒绝，不能当升级脚本使用。导入中断时DDL可能已经提交，脚本不自动删表或重建库；先检查报错及独立演示库，另建新的空库重试。已有项目升级只执行尚未执行的编号业务迁移。

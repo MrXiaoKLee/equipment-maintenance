@@ -337,7 +337,7 @@ MySQL保存设备、工单、记录、用户和权限。Redis满足框架登录�
 
 ## 7 目录与代码组织
 
-当前结构如下。业务迁移为001至008，历史v0.1.0交付以该Git标签为准。
+当前结构如下。业务迁移为001至009，历史v0.1.0交付以该Git标签为准。
 
 ```text
 equipment-maintenance/
@@ -367,7 +367,8 @@ equipment-maintenance/
 │   ├── 005_work_order_process_review_menu.sql
 │   ├── 006_statistics_export_menu.sql
 │   ├── 007_remove_unused_module_menus.sql
-│   └── 008_xiaokang_branding.sql
+│   ├── 008_xiaokang_branding.sql
+│   └── 009_hide_upstream_website_menu.sql
 ├── scripts/
 │   ├── initialize_database.py
 │   └── seed_demo.py
@@ -719,7 +720,7 @@ CREATE DATABASE equipment_maintenance
 Get-ChildItem -LiteralPath '.\equipment-backend\sql' -Filter '*.sql'
 ```
 
-在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`、`007_remove_unused_module_menus.sql`、`008_xiaokang_branding.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
+在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`、`007_remove_unused_module_menus.sql`、`008_xiaokang_branding.sql`、`009_hide_upstream_website_menu.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
 
 ### 11.4 后端配置
 

@@ -18,6 +18,7 @@ SQL_FILES = [
     "sql/006_statistics_export_menu.sql",
     "sql/007_remove_unused_module_menus.sql",
     "sql/008_xiaokang_branding.sql",
+    "sql/009_hide_upstream_website_menu.sql",
 ]
 
 
