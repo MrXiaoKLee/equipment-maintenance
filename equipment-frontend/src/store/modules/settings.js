@@ -19,7 +19,8 @@ const useSettingsStore = defineStore(
       sideTheme: storageSetting.sideTheme || sideTheme,
       showSettings: showSettings,
       navType: storageSetting.navType === undefined ? navType : storageSetting.navType,
-      tagsView: storageSetting.tagsView === undefined ? tagsView : storageSetting.tagsView,
+      // 本项目关闭页签栏，不从旧的浏览器布局配置中恢复此开关。
+      tagsView: tagsView,
       tagsViewPersist: storageSetting.tagsViewPersist === undefined ? tagsViewPersist : storageSetting.tagsViewPersist,
       tagsIcon: storageSetting.tagsIcon === undefined ? tagsIcon : storageSetting.tagsIcon,
       tagsViewStyle: storageSetting.tagsViewStyle === undefined ? tagsViewStyle : storageSetting.tagsViewStyle,
