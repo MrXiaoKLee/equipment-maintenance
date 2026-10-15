@@ -12,7 +12,8 @@
       <el-form-item><el-button type="primary" icon="Search" @click="search">搜索</el-button><el-button icon="Refresh" @click="resetQuery">重置</el-button></el-form-item>
     </el-form>
     <el-row :gutter="10" class="mb8">
-      <el-col :span="3"><el-button v-hasPermi="['equipment:workorder:add']" type="primary" plain icon="Plus" @click="openCreate">提交报修</el-button></el-col>
+      <el-col :xs="12" :sm="6" :lg="3"><el-button v-hasPermi="['equipment:workorder:add']" type="primary" plain icon="Plus" @click="openCreate">提交报修</el-button></el-col>
+      <el-col :xs="12" :sm="6" :lg="3"><el-button v-hasPermi="['equipment:workorder:export']" type="warning" plain icon="Download" @click="exportOrders">导出工单</el-button></el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
     <el-alert title="列表、详情与设备历史均按当前账号的角色范围展示。" type="info" :closable="false" class="mb8" />
@@ -126,6 +127,9 @@ async function getList() {
 }
 function search() { query.pageNum = 1; getList() }
 function resetQuery() { proxy.resetForm('queryRef'); dateRange.value = []; search() }
+function exportOrders() {
+  proxy.download('equipment/workorder/export', { ...query, beginDate: dateRange.value?.[0], endDate: dateRange.value?.[1] }, `workorders_${Date.now()}.xlsx`)
+}
 function showDetail(row) { detailId.value = row.workOrderId; detailOpen.value = true }
 
 function openCreate() {

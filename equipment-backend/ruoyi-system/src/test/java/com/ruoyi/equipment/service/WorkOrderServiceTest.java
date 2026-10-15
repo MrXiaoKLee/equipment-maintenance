@@ -292,6 +292,62 @@ class WorkOrderServiceTest
         return request;
     }
 
+    @Test
+    void exportUsesActorScopeAndAllMatchingRowsWithoutPagination()
+    {
+        WorkOrderQuery query = new WorkOrderQuery(); query.setReporterId(200L); query.setBeginDate("2026-01-01");
+        order.setStatus("CANCELLED"); order.setFaultCategory("LEGACY"); order.setPriority("NORMAL");
+        when(orders.selectExportList(query, reporter)).thenReturn(java.util.Collections.nCopies(1000, order));
+        PageHelper.startPage(3, 1);
+        var rows = service.export(query);
+        assertEquals(1000, rows.size());
+        assertNull(query.getReporterId());
+        assertNotNull(query.getBeginTime());
+        assertNull(PageHelper.getLocalPage());
+        assertEquals("LEGACY", rows.get(0).getFaultCategory());
+        assertEquals("CANCELLED", rows.get(0).getStatus());
+        verify(orders).selectExportList(query, reporter);
+        verify(orders, never()).selectList(any(), any());
+    }
+
+    @Test
+    void exportRefuses1001RatherThanSilentlyTruncating()
+    {
+        when(orders.selectExportList(any(), eq(reporter))).thenReturn(java.util.Collections.nCopies(1001, order));
+        error(400, () -> service.export(new WorkOrderQuery()));
+    }
+
+    @Test
+    void exportedWorkbookHasChineseLabelsTimesAndNoInternalFields() throws Exception
+    {
+        when(dictionaries.selectDictDataByType(anyString())).thenAnswer(call -> {
+            SysDictData entry = new SysDictData();
+            String type = call.getArgument(0);
+            entry.setDictValue("eq_priority".equals(type) ? "NORMAL" : "eq_work_order_status".equals(type) ? "CLOSED" : "MECHANICAL");
+            entry.setDictLabel("eq_priority".equals(type) ? "普通" : "eq_work_order_status".equals(type) ? "已关闭" : "机械");
+            return List.of(entry);
+        });
+        order.setTitle("=1+1"); order.setStatus("CLOSED"); order.setFaultCategory("MECHANICAL"); order.setPriority("NORMAL");
+        order.setCreateTime(new java.util.Date()); order.setClosedTime(new java.util.Date());
+        order.setSymptom("模拟异响"); order.setEquipmentCode("TEMP-EQ"); order.setReporterName("模拟报修");
+        when(orders.selectExportList(any(), eq(reporter))).thenReturn(List.of(order));
+        var response = new org.springframework.mock.web.MockHttpServletResponse();
+        new com.ruoyi.common.utils.poi.ExcelUtil<>(com.ruoyi.equipment.vo.WorkOrderExportRow.class)
+                .exportExcel(response, service.export(new WorkOrderQuery()), "故障工单");
+        try (var book = org.apache.poi.ss.usermodel.WorkbookFactory.create(new java.io.ByteArrayInputStream(response.getContentAsByteArray())))
+        {
+            var sheet = book.getSheetAt(0);
+            assertEquals(1, sheet.getLastRowNum());
+            assertEquals(16, sheet.getRow(0).getLastCellNum());
+            assertEquals("工单编号", sheet.getRow(0).getCell(0).getStringCellValue());
+            assertEquals("机械", sheet.getRow(1).getCell(4).getStringCellValue());
+            assertEquals("普通", sheet.getRow(1).getCell(5).getStringCellValue());
+            assertEquals("已关闭", sheet.getRow(1).getCell(9).getStringCellValue());
+            assertFalse(sheet.getRow(1).getCell(11).getStringCellValue().isBlank());
+            assertEquals(org.apache.poi.ss.usermodel.CellType.STRING, sheet.getRow(1).getCell(1).getCellType());
+        }
+    }
+
     private WorkOrderAssignRequest assignRequest()
     {
         WorkOrderAssignRequest request = new WorkOrderAssignRequest();

@@ -11,6 +11,7 @@ import com.ruoyi.equipment.vo.MaintainerOption;
 public interface WorkOrderMapper
 {
     List<WorkOrder> selectList(@Param("query") WorkOrderQuery query, @Param("actor") EquipmentActor actor);
+    List<WorkOrder> selectExportList(@Param("query") WorkOrderQuery query, @Param("actor") EquipmentActor actor);
     WorkOrder selectById(Long id);
     WorkOrder lockById(Long id);
     int countVisibleOpen(@Param("equipmentId") Long equipmentId, @Param("actor") EquipmentActor actor);

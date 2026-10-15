@@ -1,5 +1,6 @@
 package com.ruoyi.web.controller.equipment;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,8 @@ import com.ruoyi.equipment.dto.WorkOrderProcessRequest;
 import com.ruoyi.equipment.dto.WorkOrderSubmitReviewRequest;
 import com.ruoyi.equipment.dto.WorkOrderReviewRequest;
 import com.ruoyi.equipment.service.IWorkOrderService;
+import com.ruoyi.equipment.vo.WorkOrderExportRow;
+import com.ruoyi.common.utils.poi.ExcelUtil;
 
 @RestController
 @RequestMapping("/equipment/workorder")
@@ -48,6 +51,14 @@ public class WorkOrderController extends BaseController
     public AjaxResult get(@PathVariable Long id)
     {
         return success(service.get(id));
+    }
+
+    @PreAuthorize("@ss.hasPermi('equipment:workorder:export')")
+    @Log(title = "故障工单", businessType = BusinessType.EXPORT)
+    @PostMapping("/export")
+    public void export(HttpServletResponse response, WorkOrderQuery query)
+    {
+        new ExcelUtil<>(WorkOrderExportRow.class).exportExcel(response, service.export(query), "故障工单");
     }
 
     @PreAuthorize("@ss.hasPermi('equipment:workorder:query')")

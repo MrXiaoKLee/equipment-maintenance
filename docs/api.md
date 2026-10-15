@@ -1,6 +1,6 @@
-# 已实现接口：设备台账与故障工单
+# 已实现接口：设备台账、故障工单与统计
 
-当前文档覆盖P2至P4。前端开发代理将 `/dev-api` 转发至本机8080，并去除该前缀。请求携带若依 `Authorization: Bearer <token>`；不在示例中保存真实令牌。
+当前文档覆盖P2至P5。前端开发代理将 `/dev-api` 转发至本机8080，并去除该前缀。请求携带若依 `Authorization: Bearer <token>`；不在示例中保存真实令牌。
 
 | 方法与路径 | 权限 | 参数与响应 |
 | --- | --- | --- |
@@ -126,3 +126,20 @@
 ```
 
 记录增加PROCESS_NOTE、SUBMIT_REVIEW、REVIEW_REJECT、REVIEW_APPROVE；GET records继续按createTime、recordId升序返回每轮完整结果，详情组件展示最近一轮结果并保留全部时间线。所有动作均先锁设备再锁工单，在同一READ_COMMITTED事务中条件更新主表并追加记录；任一记录写入失败回滚主表及流程时间。
+
+## P5统计与工单导出接口
+
+| 方法与路径 | 权限 | 请求与响应 |
+| --- | --- | --- |
+| GET `/equipment/statistics/overview` | `equipment:statistics:query` | 可选beginDate/endDate（yyyy-MM-dd）和equipmentId；返回code/msg/data |
+| POST `/equipment/workorder/export` | `equipment:workorder:export` | 表单编码的工单列表筛选；成功返回XLSX，失败返回JSON业务错误 |
+
+统计仅管理人员可调用，服务层再次核对业务角色；未登录401，其他业务角色403。设备总数和设备使用状态固定为全局；工单指标应用提交日期与设备筛选。工单总数包含已取消，类别和设备报修排名排除已取消，未结束为待受理、处理中、待复核。结束日期按北京时间转换为次日零点且不包含该时刻；非法日期、区间倒置或非正设备ID为400。
+
+统计data包含 `equipmentTotal/orderTotal/openOrderCount/closedOrderCount/averageClosedHours/equipmentStatuses/orderStatuses/faultCategories/topEquipment/generatedTime`。前三个分布数组的元素为 `code/label/count`；排名元素为 `equipmentId/equipmentCode/equipmentName/count`，设备ID为字符串。generatedTime为北京时间 `yyyy-MM-dd HH:mm:ss`。设备三种状态和工单五种状态缺项补0；类别仅返回有数据项。
+
+averageClosedHours仅计算已关闭工单的提交至关闭平均小时数，保留两位小数；无已关闭数据为null，不能用0替代。topEquipment最多10项，数量倒序、同数按设备编号升序。一次汇总使用只读REPEATABLE_READ事务。
+
+工单导出接受 `workOrderNo/equipmentId/status/faultCategory/priority/beginDate/endDate/reporterId/handlerId/reporterName/handlerName/openOnly`，以 `application/x-www-form-urlencoded` 发送，沿用列表匹配规则。忽略分页，固定按提交时间、工单ID倒序；多角色范围取并集。报修人只能导出本人、维护人只能导出分配给本人，管理人员可导出全部；伪造人员筛选不能扩大范围。1000条允许，超过1000条返回业务码400并要求缩小条件，不静默截断。空结果返回只有表头的工作表。
+
+16列包括工单、设备、类别、优先级、现象、人员、状态及六个流程时间，不包含ID、版本或完整时间线。类别、优先级、状态使用字典标签，缺失回退代码；没有发生的流程时间为空。完整字段顺序、口径及使用方式见 [统计与工单导出](statistics-and-export.md)。

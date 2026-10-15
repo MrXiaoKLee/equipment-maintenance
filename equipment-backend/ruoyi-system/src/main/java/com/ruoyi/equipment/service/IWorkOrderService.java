@@ -11,10 +11,12 @@ import com.ruoyi.equipment.dto.WorkOrderProcessRequest;
 import com.ruoyi.equipment.dto.WorkOrderSubmitReviewRequest;
 import com.ruoyi.equipment.dto.WorkOrderReviewRequest;
 import com.ruoyi.equipment.vo.MaintainerOption;
+import com.ruoyi.equipment.vo.WorkOrderExportRow;
 
 public interface IWorkOrderService
 {
     List<WorkOrder> list(WorkOrderQuery query, int pageNum, int pageSize);
+    List<WorkOrderExportRow> export(WorkOrderQuery query);
     WorkOrder get(Long id);
     List<WorkOrderRecord> records(Long id);
     List<MaintainerOption> maintainers(String keyword, int pageNum, int pageSize);

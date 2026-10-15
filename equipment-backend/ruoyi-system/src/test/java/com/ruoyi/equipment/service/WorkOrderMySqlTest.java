@@ -28,6 +28,8 @@ import com.ruoyi.equipment.dto.WorkOrderQuery;
 import com.ruoyi.equipment.dto.WorkOrderProcessRequest;
 import com.ruoyi.equipment.dto.WorkOrderSubmitReviewRequest;
 import com.ruoyi.equipment.dto.WorkOrderReviewRequest;
+import com.ruoyi.equipment.dto.StatisticsQuery;
+import com.ruoyi.equipment.mapper.StatisticsMapper;
 import com.ruoyi.equipment.mapper.EquipmentMapper;
 import com.ruoyi.equipment.mapper.WorkOrderMapper;
 import com.ruoyi.equipment.security.EquipmentActor;
@@ -51,6 +53,7 @@ class WorkOrderMySqlTest
     private EquipmentAuthorization authorization;
     private IWorkOrderService service;
     private WorkOrderMapper mapper;
+    private StatisticsService statistics;
     private final EquipmentActor reporter = new EquipmentActor(100L, "test_reporter", "模拟报修", false, true, false);
     private final EquipmentActor manager = new EquipmentActor(1L, "test_manager", "模拟管理", true, false, false);
 
@@ -73,7 +76,8 @@ class WorkOrderMySqlTest
         SqlSessionFactoryBean factory = new SqlSessionFactoryBean();
         factory.setDataSource(dataSource);
         factory.setMapperLocations(new ClassPathResource("mapper/equipment/EquipmentMapper.xml"),
-                new ClassPathResource("mapper/equipment/WorkOrderMapper.xml"));
+                new ClassPathResource("mapper/equipment/WorkOrderMapper.xml"),
+                new ClassPathResource("mapper/equipment/StatisticsMapper.xml"));
         SqlSessionTemplate session = new SqlSessionTemplate(factory.getObject());
         mapper = spy(session.getMapper(WorkOrderMapper.class));
         // 账号表只读；MySQL临时表不能被同一查询以两个别名重复引用，保留真实用户关联查询。
@@ -96,6 +100,17 @@ class WorkOrderMySqlTest
         ProxyFactory proxy = new ProxyFactory(target);
         proxy.addAdvice(new TransactionInterceptor(new DataSourceTransactionManager(dataSource), new AnnotationTransactionAttributeSource()));
         service = (IWorkOrderService) proxy.getProxy();
+        StatisticsMapper actualStatistics = session.getMapper(StatisticsMapper.class);
+        StatisticsMapper statisticsMapper = spy(actualStatistics);
+        doAnswer(call -> {
+            assertTrue(org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly());
+            assertEquals(Connection.TRANSACTION_REPEATABLE_READ, connection.getTransactionIsolation());
+            return actualStatistics.selectSummary(call.getArgument(0));
+        }).when(statisticsMapper).selectSummary(any());
+        ProxyFactory statisticsProxy = new ProxyFactory(new StatisticsService(statisticsMapper, authorization, dictionaries));
+        statisticsProxy.setProxyTargetClass(true);
+        statisticsProxy.addAdvice(new TransactionInterceptor(new DataSourceTransactionManager(dataSource), new AnnotationTransactionAttributeSource()));
+        statistics = (StatisticsService) statisticsProxy.getProxy();
     }
 
     @AfterEach
@@ -275,6 +290,107 @@ class WorkOrderMySqlTest
     {
         var request = new WorkOrderReviewRequest(); request.setVersion(version);
         request.setDecision(decision); request.setDescription("模拟复核说明"); return request;
+    }
+
+    @Test
+    void statisticsRespectDateBoundaryCancellationAndGlobalEquipmentCounts()
+    {
+        seedStatistics();
+        var query = day("2026-01-01");
+        var overview = statistics.overview(query);
+        assertEquals(3, overview.getEquipmentTotal());
+        assertEquals(6, overview.getOrderTotal());
+        assertEquals(3, overview.getOpenOrderCount());
+        assertEquals(2, overview.getClosedOrderCount());
+        assertEquals(0, new java.math.BigDecimal("1.50").compareTo(overview.getAverageClosedHours()));
+        assertEquals(6, overview.getOrderStatuses().stream().mapToLong(r -> r.getCount()).sum());
+        assertEquals(5, overview.getFaultCategories().stream().mapToLong(r -> r.getCount()).sum());
+        assertEquals(3, overview.getFaultCategories().stream().filter(r -> "MECHANICAL".equals(r.getCode())).findFirst().orElseThrow().getCount());
+        assertEquals(7L, overview.getTopEquipment().get(0).getEquipmentId());
+        assertEquals(3, overview.getTopEquipment().get(0).getCount());
+        query.setEquipmentId(8L);
+        overview = statistics.overview(query);
+        assertEquals(3, overview.getEquipmentTotal());
+        assertEquals(2, overview.getOrderTotal());
+        assertEquals(1, overview.getClosedOrderCount());
+        assertEquals(0, java.math.BigDecimal.ONE.compareTo(overview.getAverageClosedHours()));
+        var empty = statistics.overview(day("2027-01-01"));
+        assertEquals(0, empty.getOrderTotal()); assertEquals(3, empty.getEquipmentTotal());
+        assertNull(empty.getAverageClosedHours());
+        assertEquals(5, empty.getOrderStatuses().size());
+    }
+
+    @Test
+    void rankingUsesTopTenCodeTieBreakAndExcludesCancelledOnlyDevices()
+    {
+        for (int i = 0; i < 13; i++)
+        {
+            long id = 100 + i;
+            jdbc.update("INSERT INTO eq_equipment(equipment_id,equipment_code,equipment_name,equipment_type,location,equipment_status,version,create_by,create_time) VALUES(?,?,?,'OTHER','temporary','IN_SERVICE',0,'test',NOW())", id, String.format("RANK-%02d",i), "temporary rank");
+            seedOrder(id, id, i == 0 ? "CANCELLED" : "WAITING", "MECHANICAL", "2026-01-01 09:00:00", null,100,300);
+        }
+        var result = statistics.overview(day("2026-01-01"));
+        assertEquals(13, result.getOrderTotal());
+        assertEquals(10, result.getTopEquipment().size());
+        assertEquals("RANK-01", result.getTopEquipment().get(0).getEquipmentCode());
+        assertEquals("RANK-10", result.getTopEquipment().get(9).getEquipmentCode());
+        assertNull(result.getAverageClosedHours());
+    }
+
+    @Test
+    void exportedRowsMatchListFiltersAndRoleUnionInRealSql()
+    {
+        seedStatistics();
+        var query = new WorkOrderQuery(); query.setBeginDate("2026-01-01"); query.setEndDate("2026-01-01"); query.setStatus("CLOSED");
+        var exported = service.export(query);
+        assertEquals(List.of("P5-204"), exported.stream().map(r -> r.getWorkOrderNo()).toList());
+        assertEquals(service.list(query,1,100).size(), exported.size());
+        jdbc.update("UPDATE eq_work_order SET handler_id=100 WHERE work_order_id=205");
+        when(authorization.requireReader()).thenReturn(new EquipmentActor(100L,"dual","Dual",false,true,true));
+        exported = service.export(query);
+        assertEquals(2, exported.size());
+        assertTrue(exported.stream().anyMatch(row -> "P5-205".equals(row.getWorkOrderNo())));
+        when(authorization.requireReader()).thenReturn(manager);
+        exported = service.export(query);
+        assertEquals(2, exported.size());
+        query.setEquipmentId(7L);
+        assertEquals(1, service.export(query).size());
+    }
+
+    @Test
+    void realExportLimitFetches1001AndAcceptsExactly1000()
+    {
+        List<Object[]> batch = new java.util.ArrayList<>();
+        for (int i = 1; i <= 1001; i++) batch.add(new Object[] {"P5-LIMIT-" + i});
+        jdbc.batchUpdate("INSERT INTO eq_work_order(work_order_no,equipment_id,title,symptom,fault_category,priority,occurred_time,reporter_id,status,version,create_by,create_time) VALUES(?,7,'temporary','temporary','MECHANICAL','NORMAL','2026-01-01 09:00:00',100,'WAITING',0,'test','2026-01-01 09:00:00')", batch);
+        assertEquals(1001, mapper.selectExportList(new WorkOrderQuery(),reporter).size());
+        assertEquals(400, assertThrows(ServiceException.class, () -> service.export(new WorkOrderQuery())).getCode());
+        jdbc.update("DELETE FROM eq_work_order WHERE work_order_no='P5-LIMIT-1001'");
+        assertEquals(1000, service.export(new WorkOrderQuery()).size());
+    }
+
+    private StatisticsQuery day(String date)
+    {
+        var query = new StatisticsQuery(); query.setBeginDate(date); query.setEndDate(date); return query;
+    }
+
+    private void seedStatistics()
+    {
+        jdbc.update("INSERT INTO eq_equipment(equipment_id,equipment_code,equipment_name,equipment_type,location,equipment_status,version,create_by,create_time) VALUES(8,'TEMP-EQ-8','temporary','OTHER','temporary','OUT_OF_SERVICE',0,'test',NOW()),(9,'TEMP-EQ-9','temporary','OTHER','temporary','RETIRED',0,'test',NOW())");
+        seedOrder(201,7,"WAITING","MECHANICAL","2026-01-01 00:00:00",null,100,300);
+        seedOrder(202,7,"PROCESSING","ELECTRICAL","2026-01-01 12:00:00",null,100,300);
+        seedOrder(203,8,"PENDING_REVIEW","MECHANICAL","2026-01-01 13:00:00",null,200,400);
+        seedOrder(204,7,"CLOSED","MECHANICAL","2026-01-01 14:00:00","2026-01-01 16:00:00",100,300);
+        seedOrder(205,8,"CLOSED","ELECTRICAL","2026-01-01 22:00:00","2026-01-01 23:00:00",200,400);
+        seedOrder(206,7,"CANCELLED","SOFTWARE","2026-01-01 23:59:59",null,100,300);
+        seedOrder(207,7,"WAITING","MECHANICAL","2025-12-31 23:59:59",null,100,300);
+        seedOrder(208,7,"CLOSED","MECHANICAL","2026-01-02 00:00:00","2026-01-02 01:00:00",100,300);
+    }
+
+    private void seedOrder(long id, long equipmentId, String status, String category, String created, String closed, long reporterId, long handlerId)
+    {
+        jdbc.update("INSERT INTO eq_work_order(work_order_id,work_order_no,equipment_id,title,symptom,fault_category,priority,occurred_time,reporter_id,handler_id,status,version,create_by,create_time,closed_time) VALUES(?,?,?,'temporary','temporary',?,'NORMAL',?,?,?,?,0,'test',?,?)",
+                id,"P5-"+id,equipmentId,category,created,reporterId,handlerId,status,created,closed);
     }
 
     private WorkOrderCreateRequest request()

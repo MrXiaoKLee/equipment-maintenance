@@ -1,4 +1,4 @@
-# 业务数据库：P2至P4
+# 业务数据库：P2至P5
 
 项目库为 `equipment_maintenance`，MySQL8、InnoDB、utf8mb4。完整字段定义见README第8节和实际DDL `sql/001_business_schema.sql`。
 
@@ -9,9 +9,10 @@
 3. 执行 `sql/002_business_dict_menu.sql`。
 4. 执行 `sql/003_work_order_record.sql` 与 `sql/004_work_order_dict_menu.sql`。
 5. 执行 `sql/005_work_order_process_review_menu.sql`，新增处理、提交及复核按钮权限。
-6. 重启后端并重新登录，加载字典、菜单及权限。
+6. 执行 `sql/006_statistics_export_menu.sql`，新增统计页面及工单导出权限。
+7. 重启后端并重新登录，加载字典、菜单及权限。
 
-本机已完成P2至P4迁移，原版31表加三张业务表共34表。业务脚本无DROP/TRUNCATE，菜单脚本重复执行不重复新增，也不重置已有配置。`CREATE TABLE IF NOT EXISTS`仅处理缺失表，后续结构升级新增编号脚本，不能以重跑001代替迁移。
+本机已完成P2至P5迁移，原版31表加三张业务表共34表。业务脚本无DROP/TRUNCATE，菜单脚本重复执行不重复新增，也不重置已有配置。`CREATE TABLE IF NOT EXISTS`仅处理缺失表，后续结构升级新增编号脚本，不能以重跑001代替迁移。
 
 ## 已建立结构
 
@@ -47,3 +48,13 @@ SQL初始化不包含样例业务数据。开发库目前的三条模拟设备�
 005仅新增三个功能权限和相应角色授权：eq_maintainer获得process/submit，eq_manager获得review。多角色账号权限取并集，但处理动作仍要求当前handler_id匹配。脚本已重复执行两次，三个权限各一条，不改变已有用户的角色关联。无新增业务表或字段，项目库仍34表。
 
 追加处理也更新工单version与审计时间；提交写last_submit_time，通过写closed_time，退回保留原处理人和之前的提交时间。条件更新检查ID、当前状态、版本，维护动作另外限定handler_id。结果字段仅在提交记录中保存，其他动作不填充。事务测试已覆盖四种新动作的记录写入失败回滚，以及两轮提交历史保留；跨连接冲突另用真实API验收。
+
+## P5变化
+
+006新增 `equipment:statistics:query` 统计页面权限与 `equipment:workorder:export` 导出按钮权限。统计分配给eq_manager，导出分配给eq_manager、eq_reporter、eq_maintainer；不会修改现有账号的业务角色。本机执行两次后两个权限各一条，无新增业务表或字段，项目库仍34表。
+
+统计按 `eq_work_order.create_time` 使用左闭右开日期区间，设备状态查询独立于工单筛选；类别及排名显式排除CANCELLED。平均闭环时长以 `TIMESTAMPDIFF(SECOND, create_time, closed_time)/3600.0` 计算已关闭工单的平均值，保留两位小数；没有已关闭工单时为NULL。多条汇总查询在同一只读REPEATABLE_READ事务内完成，没有新增缓存表或Redis统计缓存。
+
+工单列表与导出共用 `FilteredOrders` SQL片段，包含角色数据范围和筛选，固定按create_time、work_order_id倒序。导出不使用分页，读取LIMIT 1001探测超限；1000条允许，1001条拒绝。导出同样使用只读REPEATABLE_READ事务。
+
+新增4项真实MySQL测试，累计14项；使用连接级临时业务表验证统计边界、排名、范围及1000/1001条导出，并检查实际事务只读及隔离级别。临时表不复制正式外键，且未专门模拟统计中途跨连接写入；完整空库复现仍留待P6。使用说明及字段契约见 [统计与工单导出](statistics-and-export.md)。

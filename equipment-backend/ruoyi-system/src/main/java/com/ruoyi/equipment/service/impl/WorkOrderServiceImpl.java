@@ -1,6 +1,5 @@
 package com.ruoyi.equipment.service.impl;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -8,6 +7,8 @@ import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,8 @@ import com.ruoyi.equipment.dto.WorkOrderAssignRequest;
 import com.ruoyi.equipment.dto.WorkOrderCancelRequest;
 import com.ruoyi.equipment.dto.WorkOrderCreateRequest;
 import com.ruoyi.equipment.dto.WorkOrderQuery;
+import com.ruoyi.equipment.dto.ReportingPeriod;
+import com.ruoyi.equipment.vo.WorkOrderExportRow;
 import com.ruoyi.equipment.dto.WorkOrderProcessRequest;
 import com.ruoyi.equipment.dto.WorkOrderSubmitReviewRequest;
 import com.ruoyi.equipment.dto.WorkOrderReviewRequest;
@@ -72,6 +75,32 @@ public class WorkOrderServiceImpl implements IWorkOrderService
         {
             PageHelper.clearPage();
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<WorkOrderExportRow> export(WorkOrderQuery query)
+    {
+        EquipmentActor actor = authorization.requireReader();
+        normalizeQuery(query, actor);
+        PageHelper.clearPage();
+        List<WorkOrder> rows = mapper.selectExportList(query, actor);
+        if (rows.size() > 1000)
+        {
+            throw new ServiceException("导出超过1000条，请缩小筛选范围", 400);
+        }
+        Map<String, String> categories = dictionaryLabels("eq_fault_category");
+        Map<String, String> priorities = dictionaryLabels("eq_priority");
+        Map<String, String> statuses = dictionaryLabels("eq_work_order_status");
+        return rows.stream().map(row -> WorkOrderExportRow.from(row, categories, priorities, statuses)).toList();
+    }
+
+    private Map<String, String> dictionaryLabels(String type)
+    {
+        Map<String, String> labels = new HashMap<>();
+        var entries = dictionaries.selectDictDataByType(type);
+        if (entries != null) entries.forEach(entry -> labels.put(entry.getDictValue(), entry.getDictLabel()));
+        return labels;
     }
 
     @Override
@@ -379,34 +408,15 @@ public class WorkOrderServiceImpl implements IWorkOrderService
         query.setHandlerName(text(query.getHandlerName(), "维护人员筛选", 64, false));
         if (!query.getStatus().isEmpty()) WorkOrderStatus.parse(query.getStatus());
         if (!query.getPriority().isEmpty()) WorkOrderPriority.parse(query.getPriority());
-        query.setBeginTime(parseDate(query.getBeginDate(), false));
-        query.setEndTime(parseDate(query.getEndDate(), true));
-        if (query.getBeginTime() != null && query.getEndTime() != null
-                && !query.getBeginTime().before(query.getEndTime()))
-        {
-            throw new ServiceException("开始日期不能晚于结束日期", 400);
-        }
+        ReportingPeriod period = ReportingPeriod.parse(query.getBeginDate(), query.getEndDate());
+        query.setBeginTime(period.getBeginTime());
+        query.setEndTime(period.getEndTime());
         if (!actor.isManager())
         {
             query.setReporterId(null);
             query.setHandlerId(null);
             query.setReporterName("");
             query.setHandlerName("");
-        }
-    }
-
-    private Date parseDate(String value, boolean end)
-    {
-        if (value == null || value.isBlank()) return null;
-        try
-        {
-            LocalDate date = LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE);
-            if (date.getYear() < 1000 || date.getYear() > 9998) throw new DateTimeParseException("range", value, 0);
-            return Date.from((end ? date.plusDays(1) : date).atStartOfDay(ZONE).toInstant());
-        }
-        catch (DateTimeParseException ex)
-        {
-            throw new ServiceException("日期应为yyyy-MM-dd格式的有效日期", 400);
         }
     }
 

@@ -4,7 +4,7 @@ Equipment Fault and Maintenance Management System
 
 本项目面向实验室设备管理场景，计划基于 Java 和若依开源后台构建设备台账、故障报修、维护处理、结果复核、历史追溯及基础统计功能。使用人员可以记录问题，维护人员可以跟踪处理，管理人员可以复核结果，并保留可查询的处理过程。
 
-本 README 是后续开发的需求与设计基线，包含第一版范围、业务规则、技术方案、数据模型、接口约定、实施顺序和验收标准。当前已导入RuoYi 3.9.2前后端并固定提交，原版登录已验证。P2设备台账、P3报修分配取消、P4维护处理和复核接口与页面已实现。项目库共34表；61项单元测试与10项MySQL事务/Mapper测试、P4共43项实际API检查、前端生产构建及后端完整打包通过。P2至P4浏览器验收均已通过，包含追加处理、退回重提、复核关闭及设备历史。统计导出及空库完整复现仍待后续阶段。实际导入版本见 [源码基线记录](docs/upstream-baseline.md)，第三方归属见 [来源说明](THIRD_PARTY_NOTICES.md)。
+本 README 是后续开发的需求与设计基线，包含第一版范围、业务规则、技术方案、数据模型、接口约定、实施顺序和验收标准。当前已导入RuoYi 3.9.2前后端并固定提交，原版登录已验证。P2设备台账、P3报修分配取消、P4维护处理与复核、P5基础统计与工单导出均已实现。项目库共34表；71项单元测试与14项MySQL事务/Mapper测试全部通过，前端生产构建及后端完整打包成功。P5新增46项实际API检查，图表、日期与设备筛选、空结果、移动布局及浏览器Excel下载验收通过。P2至P4完整流程的验收记录继续保留。P6空库完整复现与第一版交付尚未完成。实际导入版本见 [源码基线记录](docs/upstream-baseline.md)，第三方归属见 [来源说明](THIRD_PARTY_NOTICES.md)。
 
 | 项目项 | 约定 |
 | --- | --- |
@@ -331,7 +331,7 @@ MySQL保存设备、工单、记录、用户和权限。Redis满足框架登录�
 
 ## 7 目录与代码组织
 
-以下为完整规划目录。当前已有前后端源码、业务迁移001至005、前端锁文件、接口与数据库文档、P2至P4运行说明、验证记录及截图；统计与最终交付部分继续按阶段推进。
+以下为完整规划目录。当前已有前后端源码、业务迁移001至006、前端锁文件、接口与数据库文档、P2至P5运行说明、验证记录及截图；空库复现与最终交付继续按P6推进。
 
 ```text
 equipment-maintenance/
@@ -707,7 +707,7 @@ CREATE DATABASE equipment_maintenance
 Get-ChildItem -LiteralPath '.\equipment-backend\sql' -Filter '*.sql'
 ```
 
-在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
+在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
 
 ### 11.4 后端配置
 
@@ -905,11 +905,11 @@ mvn test -DskipTests=false -Dmaven.test.skip=false
 - [x] 已实现设备台账接口与页面，业务测试、API和浏览器操作验收通过。
 - [x] 已实现P3报修、工单查询、分配、取消和动作时间线，接口、事务、并发与浏览器验收通过。
 - [x] 已实现P4维护处理与复核，完整流程、事务、并发及浏览器验收通过。
-- [ ] 已实现统计导出。
+- [x] 已实现P5基础统计与工单导出，口径、角色范围、1000条上限、图表与浏览器下载验收通过。
 - [ ] 已执行关键测试与空库复现。
 - [ ] 已完成演示及v0.1.0交付。
 
-P3/P4运行与功能说明见 [故障工单模块](docs/work-orders.md)。P2运行与功能说明见 [设备台账模块](docs/equipment-ledger.md)，实际接口、数据库和测试记录分别见 [接口文档](docs/api.md)、[数据库文档](docs/database.md)、[验证记录](docs/verification.md)。
+P5运行与口径说明见 [统计与工单导出](docs/statistics-and-export.md)。P3/P4运行与功能说明见 [故障工单模块](docs/work-orders.md)。P2运行与功能说明见 [设备台账模块](docs/equipment-ledger.md)，实际接口、数据库和测试记录分别见 [接口文档](docs/api.md)、[数据库文档](docs/database.md)、[验证记录](docs/verification.md)。
 
 ### 14.2 第一版完成标准
 
@@ -931,8 +931,9 @@ README先作为完整基线，详细文档按阶段拆出，无内容时不建�
 | `docs/upstream-baseline.md` | 仓库版本、提交、环境、导入 | P1 |
 | `docs/requirements.md` | 需求编号、角色、流程、验收 | P0 |
 | `docs/development-design.md` | 组织、状态、事务、权限、改造 | P0起 |
-| `docs/database.md` | 实际DDL、索引、约束、变更 | P2至P4 |
+| `docs/database.md` | 实际DDL、索引、约束、变更 | P2至P5 |
 | `docs/api.md` | 实际参数、响应、权限、错误 | P2起 |
+| `docs/statistics-and-export.md` | 统计口径、图表筛选、导出范围与字段 | P5 |
 | `docs/verification.md` | 步骤、结果、证据 | P1起 |
 | `docs/local-setup.md` | 实际初始化、构建、启动 | P1起 |
 | `docs/development-notes.md` | 真正遇到的问题、原因、修复、验证 | 有问题时 |

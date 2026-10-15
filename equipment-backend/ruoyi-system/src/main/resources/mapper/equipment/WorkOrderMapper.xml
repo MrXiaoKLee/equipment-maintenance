@@ -60,7 +60,7 @@
         LEFT JOIN sys_user r ON r.user_id = w.reporter_id
         LEFT JOIN sys_user h ON h.user_id = w.handler_id
     </sql>
-    <select id="selectList" resultMap="Order">
+    <sql id="FilteredOrders">
         <include refid="JoinedOrder"/>
         WHERE 1 = 1
         <include refid="Scope"/>
@@ -77,7 +77,9 @@
         <if test="query.endTime != null">AND w.create_time &lt; #{query.endTime}</if>
         <if test="query.openOnly != null and query.openOnly">AND w.status IN ('WAITING','PROCESSING','PENDING_REVIEW')</if>
         ORDER BY w.create_time DESC, w.work_order_id DESC
-    </select>
+    </sql>
+    <select id="selectList" resultMap="Order"><include refid="FilteredOrders"/></select>
+    <select id="selectExportList" resultMap="Order"><include refid="FilteredOrders"/> LIMIT 1001</select>
     <select id="selectById" resultMap="Order">
         <include refid="JoinedOrder"/> WHERE w.work_order_id = #{id}
     </select>
