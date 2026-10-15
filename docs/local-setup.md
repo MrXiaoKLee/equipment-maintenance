@@ -44,7 +44,7 @@ python '.\scripts\initialize_database.py' --user equipment_demo --database equip
 脚本仅此次提示数据库密码，执行完临时连接配置即释放；这不改变日常直接配置的启动方式。默认连接本机3306，可传 `--port 3307`。它先确认目标库存在且完全为空，再依次导入：
 
 1. 固定上游 `equipment-backend/sql/ry_20260417.sql`、`quartz.sql`。
-2. 业务 `sql/001_business_schema.sql` 至 `006_statistics_export_menu.sql`。
+2. 业务 `sql/001_business_schema.sql` 至 `007_remove_unused_module_menus.sql`。007停用精简代码后不再提供的功能菜单。
 3. 核对最终34张基础表，此时没有业务设备和工单。
 
 框架SQL包含删除并重建框架表的语句，因此脚本遇到非空库会拒绝，不能当升级脚本使用。导入中断时DDL可能已经提交，脚本不自动删表或重建库；先检查报错及独立演示库，另建新的空库重试。已有项目升级只执行尚未执行的编号业务迁移。
@@ -132,4 +132,4 @@ python '.\scripts\seed_demo.py' --base-url http://127.0.0.1:8080
 4. 统计仅管理角色可见；导出与各账号列表范围一致。所有数据均带模拟说明。
 5. 正常关闭前端及后端终端使用Ctrl+C。MySQL/Redis若为共享Windows服务，不随项目关闭；若自行启动了专用实例，仅停止对应专用实例，保留数据目录以便重启。
 
-具体实测证据见 [验证记录](verification.md) 的P6部分。首次演示不要求删除若依基座源码，业务账号菜单已按角色聚焦设备模块。
+具体实测证据见 [验证记录](verification.md) 的P6部分。当前代码已按 [精简记录](code-cleanup.md) 移除与项目无关的模块，用户、角色、菜单、字典和日志等基础管理能力继续保留。

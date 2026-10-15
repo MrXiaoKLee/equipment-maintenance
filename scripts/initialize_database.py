@@ -16,6 +16,7 @@ SQL_FILES = [
     "sql/004_work_order_dict_menu.sql",
     "sql/005_work_order_process_review_menu.sql",
     "sql/006_statistics_export_menu.sql",
+    "sql/007_remove_unused_module_menus.sql",
 ]
 
 

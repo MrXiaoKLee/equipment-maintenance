@@ -8,6 +8,8 @@ Equipment Fault and Maintenance Management System
 
 首次运行见 [本地初始化与启动](docs/local-setup.md)，演示步骤见 [演示指南](docs/demo-guide.md)，交付范围和限制见 [v0.1.0交付说明](docs/release-v0.1.0.md)。现有开发库不要重新导入框架SQL或演示数据。
 
+后续代码精简已移除代码生成、表单构建、定时任务、通知公告及示例接口，后端保留admin、framework、system、common四个模块。已有环境执行新增迁移007并重新登录；本机已执行，设备与工单数据保留。范围及验证见 [代码精简记录](docs/code-cleanup.md)。
+
 | 项目项 | 约定 |
 | --- | --- |
 | 中文名称 | 设备故障与维护记录管理系统 |
@@ -317,13 +319,13 @@ flowchart LR
 
 | 类型 | 内容 |
 | --- | --- |
-| 保留 | 用户、角色、菜单、字典、登录、操作日志、分页、导出、代码生成 |
+| 保留 | 用户、角色、菜单、字典、登录、操作日志、分页、导出 |
 | 新增 | 业务实体、SQL、Service、Controller、页面、统计 |
 | 配置 | 标题、业务菜单、按钮权限、连接、本地端口、时区 |
 | 第一版不动 | 核心登录、Token存储、通用缓存、认证过滤器 |
-| 暂不展示 | 无关演示菜单，先隐藏，不批量删除基座 |
+| 已精简 | 代码生成、表单构建、定时任务、通知公告、示例接口及对应专用组件；菜单通过007停用 |
 
-代码生成用于设备CRUD和查询骨架。分配、提交、取消、通过、退回手工实现；通用修改接口不得任意写状态、处理人或操作时间。
+设备与工单业务独立维护，不依赖代码生成器运行。分配、提交、取消、通过、退回由业务接口实现；通用修改接口不得任意写状态、处理人或操作时间。
 
 ### 6.4 数据库与缓存职责
 
@@ -333,7 +335,7 @@ MySQL保存设备、工单、记录、用户和权限。Redis满足框架登录�
 
 ## 7 目录与代码组织
 
-以下为完整规划目录。当前已有前后端源码、业务迁移001至006、前端锁文件、接口与数据库文档、运行说明、演示初始化脚本、P2至P6验证记录及截图。实际交付文件以Git跟踪内容和交付说明为准，规划文件不代表全部单独创建。
+当前结构如下。代码精简后业务迁移为001至007，历史v0.1.0交付以该Git标签为准。
 
 ```text
 equipment-maintenance/
@@ -347,8 +349,6 @@ equipment-maintenance/
 │   ├── ruoyi-system/
 │   ├── ruoyi-framework/
 │   ├── ruoyi-common/
-│   ├── ruoyi-generator/
-│   ├── ruoyi-quartz/
 │   └── sql/                        # 保留上游脚本及来源
 ├── equipment-frontend/
 │   ├── LICENSE
@@ -360,17 +360,24 @@ equipment-maintenance/
 ├── sql/
 │   ├── 001_business_schema.sql
 │   ├── 002_business_dict_menu.sql
-│   ├── 003_demo_data.sql
-│   └── changes/                    # 实际变更时再创建
+│   ├── 003_work_order_record.sql
+│   ├── 004_work_order_dict_menu.sql
+│   ├── 005_work_order_process_review_menu.sql
+│   ├── 006_statistics_export_menu.sql
+│   └── 007_remove_unused_module_menus.sql
+├── scripts/
+│   ├── initialize_database.py
+│   └── seed_demo.py
 └── docs/
     ├── upstream-baseline.md
-    ├── requirements.md
-    ├── development-design.md
     ├── database.md
     ├── api.md
     ├── verification.md
     ├── local-setup.md
-    └── development-notes.md
+    ├── development-notes.md
+    ├── demo-guide.md
+    ├── release-v0.1.0.md
+    └── code-cleanup.md
 ```
 
 ### 7.1 后端组织
@@ -709,7 +716,7 @@ CREATE DATABASE equipment_maintenance
 Get-ChildItem -LiteralPath '.\equipment-backend\sql' -Filter '*.sql'
 ```
 
-在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
+在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`、`007_remove_unused_module_menus.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
 
 ### 11.4 后端配置
 
@@ -966,7 +973,7 @@ README先作为完整基线，详细文档按阶段拆出，无内容时不建�
 
 ### 16.3 项目贡献
 
-完成后如实描述基于若依新增台账、工单、范围及统计，并解释数据库、事务、条件更新和验证。登录、角色、代码生成等注明复用。
+完成后如实描述基于若依新增台账、工单、范围及统计，并解释数据库、事务、条件更新和验证。登录、用户、角色和菜单等注明复用。
 
 仅实际完成的功能案例和指标写入简历。不把模拟闭环时长写成真实工厂效率，不把公开数据分析写成现场诊断，不把复核页面写成制造质量体系经验。
 

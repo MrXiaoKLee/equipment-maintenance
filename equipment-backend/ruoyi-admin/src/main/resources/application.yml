@@ -123,9 +123,9 @@ springdoc:
     tags-sorter: alpha
   group-configs:
     - group: 'default'
-      display-name: '测试模块'
+      display-name: '设备维护业务'
       paths-to-match: '/**'
-      packages-to-scan: com.ruoyi.web.controller.tool
+      packages-to-scan: com.ruoyi.web.controller.equipment
 
 # 防盗链配置
 referer:
@@ -139,6 +139,6 @@ xss:
   # 过滤开关
   enabled: true
   # 排除链接（多个用逗号分隔）
-  excludes: /system/notice
+  excludes: ''
   # 匹配链接
-  urlPatterns: /system/*,/monitor/*,/tool/*
+  urlPatterns: /system/*,/monitor/*
