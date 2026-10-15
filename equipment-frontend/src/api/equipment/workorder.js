@@ -27,3 +27,15 @@ export function assignWorkOrder(id, data) {
 export function cancelWorkOrder(id, data) {
   return request({ url: `/equipment/workorder/${id}/cancel`, method: 'post', data })
 }
+
+export function addProcessRecord(id, data) {
+  return request({ url: `/equipment/workorder/${id}/records`, method: 'post', data })
+}
+
+export function submitWorkOrderReview(id, data) {
+  return request({ url: `/equipment/workorder/${id}/submit-review`, method: 'post', data })
+}
+
+export function reviewWorkOrder(id, data) {
+  return request({ url: `/equipment/workorder/${id}/review`, method: 'post', data })
+}

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.aop.framework.ProxyFactory;
@@ -23,6 +25,9 @@ import com.ruoyi.equipment.dto.WorkOrderAssignRequest;
 import com.ruoyi.equipment.dto.WorkOrderCancelRequest;
 import com.ruoyi.equipment.dto.WorkOrderCreateRequest;
 import com.ruoyi.equipment.dto.WorkOrderQuery;
+import com.ruoyi.equipment.dto.WorkOrderProcessRequest;
+import com.ruoyi.equipment.dto.WorkOrderSubmitReviewRequest;
+import com.ruoyi.equipment.dto.WorkOrderReviewRequest;
 import com.ruoyi.equipment.mapper.EquipmentMapper;
 import com.ruoyi.equipment.mapper.WorkOrderMapper;
 import com.ruoyi.equipment.security.EquipmentActor;
@@ -168,6 +173,108 @@ class WorkOrderMySqlTest
         assertEquals("CANCELLED", service.cancel(created.getWorkOrderId(), cancellation).getStatus());
         assertEquals(409, assertThrows(ServiceException.class, () -> service.cancel(created.getWorkOrderId(),cancellation)).getCode());
         assertEquals(2, mapper.selectRecords(created.getWorkOrderId()).size());
+    }
+
+    @Test
+    void completeWorkflowRetainsEveryRoundAndOnlyApprovalCloses()
+    {
+        Long id = assignedOrder();
+        var note = new WorkOrderProcessRequest(); note.setVersion(1); note.setDescription("第一轮模拟排查");
+        assertEquals(2, service.process(id, note).getVersion());
+        var first = submission(2, "第一轮模拟结果");
+        var pending = service.submitReview(id, first);
+        assertEquals("PENDING_REVIEW", pending.getStatus());
+        assertNotNull(pending.getLastSubmitTime());
+        assertNull(pending.getClosedTime());
+        var reject = review(3, "REJECT");
+        var returned = service.review(id, reject);
+        assertEquals("PROCESSING", returned.getStatus());
+        assertEquals(300L, returned.getHandlerId());
+        assertNull(returned.getClosedTime());
+        service.submitReview(id, submission(4, "第二轮模拟结果"));
+        var closed = service.review(id, review(5, "APPROVE"));
+        assertEquals("CLOSED", closed.getStatus());
+        assertEquals(6, closed.getVersion());
+        assertNotNull(closed.getClosedTime());
+        var history = mapper.selectRecords(id);
+        assertEquals(List.of("CREATE", "ASSIGN", "PROCESS_NOTE", "SUBMIT_REVIEW", "REVIEW_REJECT", "SUBMIT_REVIEW", "REVIEW_APPROVE"),
+                history.stream().map(r -> r.getActionType()).toList());
+        assertEquals("第一轮模拟结果", history.get(3).getResultDescription());
+        assertEquals("第二轮模拟结果", history.get(5).getResultDescription());
+        assertEquals("模拟措施", history.get(3).getMeasures());
+        assertEquals("待确认", history.get(5).getCauseAnalysis());
+        for (int i = 1; i < history.size(); i++)
+        {
+            assertTrue(history.get(i).getRecordId() > history.get(i - 1).getRecordId());
+        }
+        assertEquals("IN_SERVICE", jdbc.queryForObject("SELECT equipment_status FROM eq_equipment WHERE equipment_id=7", String.class));
+        note.setVersion(6);
+        assertEquals(400, assertThrows(ServiceException.class, () -> service.process(id, note)).getCode());
+        assertEquals(7, mapper.selectRecords(id).size());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"PROCESS_NOTE", "SUBMIT_REVIEW", "REVIEW_REJECT", "REVIEW_APPROVE"})
+    void recordFailureRollsBackEachWorkflowAction(String action)
+    {
+        Long id = assignedOrder();
+        boolean reviewing = action.startsWith("REVIEW_");
+        if (reviewing) service.submitReview(id, submission(1, "模拟待复核结果"));
+        var before = mapper.selectById(id);
+        int count = mapper.selectRecords(id).size();
+        jdbc.execute("ALTER TABLE eq_work_order_record ADD CONSTRAINT temp_reject_p4 CHECK (action_type != '" + action + "')");
+        assertThrows(DataAccessException.class, () -> {
+            if ("PROCESS_NOTE".equals(action))
+            {
+                var note = new WorkOrderProcessRequest(); note.setVersion(1); note.setDescription("模拟失败追加");
+                service.process(id, note);
+            }
+            else if ("SUBMIT_REVIEW".equals(action)) service.submitReview(id, submission(1, "模拟失败提交"));
+            else service.review(id, review(2, "REVIEW_APPROVE".equals(action) ? "APPROVE" : "REJECT"));
+        });
+        var after = mapper.selectById(id);
+        assertEquals(before.getStatus(), after.getStatus());
+        assertEquals(before.getVersion(), after.getVersion());
+        assertEquals(before.getLastSubmitTime(), after.getLastSubmitTime());
+        assertEquals(before.getClosedTime(), after.getClosedTime());
+        assertEquals(before.getHandlerId(), after.getHandlerId());
+        assertEquals(count, mapper.selectRecords(id).size());
+    }
+
+    @Test
+    void staleWorkflowActionDoesNotAppendOrOverwriteResult()
+    {
+        Long id = assignedOrder();
+        service.submitReview(id, submission(1, "唯一有效结果"));
+        assertEquals(409, assertThrows(ServiceException.class,
+                () -> service.submitReview(id, submission(1, "过期结果"))).getCode());
+        service.review(id, review(2, "APPROVE"));
+        assertEquals(409, assertThrows(ServiceException.class,
+                () -> service.review(id, review(2, "REJECT"))).getCode());
+        assertEquals(4, mapper.selectRecords(id).size());
+        assertEquals("唯一有效结果", mapper.selectRecords(id).get(2).getResultDescription());
+        assertEquals("CLOSED", mapper.selectById(id).getStatus());
+    }
+
+    private Long assignedOrder()
+    {
+        var created = service.create(request());
+        var assignment = new WorkOrderAssignRequest(); assignment.setVersion(0); assignment.setHandlerId(300L);
+        service.assign(created.getWorkOrderId(), assignment);
+        when(authorization.requireReader()).thenReturn(new EquipmentActor(300L,"maintainer","模拟维护",false,false,true));
+        return created.getWorkOrderId();
+    }
+
+    private WorkOrderSubmitReviewRequest submission(int version, String result)
+    {
+        var request = new WorkOrderSubmitReviewRequest(); request.setVersion(version);
+        request.setCauseAnalysis("待确认"); request.setMeasures("模拟措施"); request.setResultDescription(result); return request;
+    }
+
+    private WorkOrderReviewRequest review(int version, String decision)
+    {
+        var request = new WorkOrderReviewRequest(); request.setVersion(version);
+        request.setDecision(decision); request.setDescription("模拟复核说明"); return request;
     }
 
     private WorkOrderCreateRequest request()

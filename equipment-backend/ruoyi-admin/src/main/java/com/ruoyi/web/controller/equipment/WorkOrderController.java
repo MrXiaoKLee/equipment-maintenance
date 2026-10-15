@@ -19,6 +19,9 @@ import com.ruoyi.equipment.dto.WorkOrderAssignRequest;
 import com.ruoyi.equipment.dto.WorkOrderCancelRequest;
 import com.ruoyi.equipment.dto.WorkOrderCreateRequest;
 import com.ruoyi.equipment.dto.WorkOrderQuery;
+import com.ruoyi.equipment.dto.WorkOrderProcessRequest;
+import com.ruoyi.equipment.dto.WorkOrderSubmitReviewRequest;
+import com.ruoyi.equipment.dto.WorkOrderReviewRequest;
 import com.ruoyi.equipment.service.IWorkOrderService;
 
 @RestController
@@ -76,6 +79,30 @@ public class WorkOrderController extends BaseController
     public AjaxResult assign(@PathVariable Long id, @RequestBody WorkOrderAssignRequest request)
     {
         return success(service.assign(id, request));
+    }
+
+    @PreAuthorize("@ss.hasPermi('equipment:workorder:process')")
+    @Log(title = "追加处理记录", businessType = BusinessType.INSERT)
+    @PostMapping("/{id}/records")
+    public AjaxResult process(@PathVariable Long id, @RequestBody WorkOrderProcessRequest request)
+    {
+        return success(service.process(id, request));
+    }
+
+    @PreAuthorize("@ss.hasPermi('equipment:workorder:submit')")
+    @Log(title = "提交处理结果", businessType = BusinessType.UPDATE)
+    @PostMapping("/{id}/submit-review")
+    public AjaxResult submitReview(@PathVariable Long id, @RequestBody WorkOrderSubmitReviewRequest request)
+    {
+        return success(service.submitReview(id, request));
+    }
+
+    @PreAuthorize("@ss.hasPermi('equipment:workorder:review')")
+    @Log(title = "复核处理结果", businessType = BusinessType.UPDATE)
+    @PostMapping("/{id}/review")
+    public AjaxResult review(@PathVariable Long id, @RequestBody WorkOrderReviewRequest request)
+    {
+        return success(service.review(id, request));
     }
 
     @PreAuthorize("@ss.hasPermi('equipment:workorder:cancel')")

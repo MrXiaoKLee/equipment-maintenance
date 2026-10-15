@@ -17,6 +17,8 @@ public interface WorkOrderMapper
     int insert(WorkOrder order);
     int assign(WorkOrder order);
     int cancel(WorkOrder order);
+    int updateWorkflow(@Param("order") WorkOrder order, @Param("fromStatus") String fromStatus,
+            @Param("handlerId") Long handlerId);
     int insertRecord(WorkOrderRecord record);
     List<WorkOrderRecord> selectRecords(Long id);
     List<MaintainerOption> selectMaintainers(@Param("keyword") String keyword);

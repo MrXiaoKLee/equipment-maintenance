@@ -22,6 +22,9 @@ import com.ruoyi.equipment.dto.WorkOrderAssignRequest;
 import com.ruoyi.equipment.dto.WorkOrderCancelRequest;
 import com.ruoyi.equipment.dto.WorkOrderCreateRequest;
 import com.ruoyi.equipment.dto.WorkOrderQuery;
+import com.ruoyi.equipment.dto.WorkOrderProcessRequest;
+import com.ruoyi.equipment.dto.WorkOrderSubmitReviewRequest;
+import com.ruoyi.equipment.dto.WorkOrderReviewRequest;
 import com.ruoyi.equipment.enums.EquipmentStatus;
 import com.ruoyi.equipment.enums.WorkOrderAction;
 import com.ruoyi.equipment.enums.WorkOrderPriority;
@@ -34,7 +37,7 @@ import com.ruoyi.equipment.service.IWorkOrderService;
 import com.ruoyi.equipment.vo.MaintainerOption;
 import com.ruoyi.system.service.ISysDictTypeService;
 
-/** P3工单创建、分配、取消，主表和追加式记录在同一事务提交。 */
+/** 工单动作在服务端校验身份、状态和版本，主表与追加式记录同一事务提交。 */
 @Service
 public class WorkOrderServiceImpl implements IWorkOrderService
 {
@@ -190,6 +193,82 @@ public class WorkOrderServiceImpl implements IWorkOrderService
         return mapper.selectById(id);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
+    public WorkOrder process(Long id, WorkOrderProcessRequest request)
+    {
+        EquipmentActor actor = authorization.requireReader();
+        WorkOrder order = lockVisible(id, actor);
+        requireHandler(order, actor);
+        requireVersionStatus(order, request.getVersion(), WorkOrderStatus.PROCESSING);
+        String description = text(request.getDescription(), "处理记录", 2000, true);
+        Date now = new Date();
+        setUpdated(order, actor, now);
+        requireWritten(mapper.updateWorkflow(order, WorkOrderStatus.PROCESSING.name(), actor.getUserId()));
+        appendRecord(order, WorkOrderAction.PROCESS_NOTE, WorkOrderStatus.PROCESSING, description, actor, now);
+        return mapper.selectById(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
+    public WorkOrder submitReview(Long id, WorkOrderSubmitReviewRequest request)
+    {
+        EquipmentActor actor = authorization.requireReader();
+        WorkOrder order = lockVisible(id, actor);
+        requireHandler(order, actor);
+        requireVersionStatus(order, request.getVersion(), WorkOrderStatus.PROCESSING);
+        String cause = text(request.getCauseAnalysis(), "原因判断", 2000, true);
+        String measures = text(request.getMeasures(), "处理措施", 2000, true);
+        String result = text(request.getResultDescription(), "处理结果", 2000, true);
+        Date now = new Date();
+        order.setStatus(WorkOrderStatus.PENDING_REVIEW.name());
+        order.setLastSubmitTime(now);
+        setUpdated(order, actor, now);
+        requireWritten(mapper.updateWorkflow(order, WorkOrderStatus.PROCESSING.name(), actor.getUserId()));
+        WorkOrderRecord record = newRecord(order, WorkOrderAction.SUBMIT_REVIEW,
+                WorkOrderStatus.PROCESSING, "提交处理结果，等待复核", actor, now);
+        record.setCauseAnalysis(cause);
+        record.setMeasures(measures);
+        record.setResultDescription(result);
+        requireWritten(mapper.insertRecord(record));
+        return mapper.selectById(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
+    public WorkOrder review(Long id, WorkOrderReviewRequest request)
+    {
+        EquipmentActor actor = authorization.requireManager();
+        WorkOrder order = lockVisible(id, actor);
+        requireVersionStatus(order, request.getVersion(), WorkOrderStatus.PENDING_REVIEW);
+        String decision = text(request.getDecision(), "复核决定", 16, true);
+        if (!"APPROVE".equals(decision) && !"REJECT".equals(decision))
+        {
+            throw new ServiceException("复核决定只能为APPROVE或REJECT", 400);
+        }
+        boolean approve = "APPROVE".equals(decision);
+        String description = text(request.getDescription(), approve ? "复核结论" : "退回原因", 2000, true);
+        Date now = new Date();
+        order.setStatus(approve ? WorkOrderStatus.CLOSED.name() : WorkOrderStatus.PROCESSING.name());
+        if (approve)
+        {
+            order.setClosedTime(now);
+        }
+        setUpdated(order, actor, now);
+        requireWritten(mapper.updateWorkflow(order, WorkOrderStatus.PENDING_REVIEW.name(), null));
+        appendRecord(order, approve ? WorkOrderAction.REVIEW_APPROVE : WorkOrderAction.REVIEW_REJECT,
+                WorkOrderStatus.PENDING_REVIEW, description, actor, now);
+        return mapper.selectById(id);
+    }
+
+    private void requireHandler(WorkOrder order, EquipmentActor actor)
+    {
+        if (!actor.isMaintainer() || !Objects.equals(order.getHandlerId(), actor.getUserId()))
+        {
+            throw new ServiceException("只有当前负责的维护人员可以填写处理记录或提交复核", 403);
+        }
+    }
+
     private WorkOrder lockVisible(Long id, EquipmentActor actor)
     {
         WorkOrder initial = requireVisible(mapper.selectById(id), actor);
@@ -208,6 +287,11 @@ public class WorkOrderServiceImpl implements IWorkOrderService
 
     private void requireWaitingVersion(WorkOrder order, Integer version)
     {
+        requireVersionStatus(order, version, WorkOrderStatus.WAITING);
+    }
+
+    private void requireVersionStatus(WorkOrder order, Integer version, WorkOrderStatus expected)
+    {
         if (version == null || version < 0)
         {
             throw new ServiceException("缺少有效的工单版本号", 400);
@@ -216,13 +300,19 @@ public class WorkOrderServiceImpl implements IWorkOrderService
         {
             throw new ServiceException("工单已更新，请刷新后重试", 409);
         }
-        if (!WorkOrderStatus.WAITING.name().equals(order.getStatus()))
+        if (!expected.name().equals(order.getStatus()))
         {
-            throw new ServiceException("只有待受理工单可以分配或取消", 400);
+            throw new ServiceException("当前工单状态不允许该操作，请刷新后查看", 400);
         }
     }
 
     private void appendRecord(WorkOrder order, WorkOrderAction action, WorkOrderStatus from,
+            String description, EquipmentActor actor, Date time)
+    {
+        requireWritten(mapper.insertRecord(newRecord(order, action, from, description, actor, time)));
+    }
+
+    private WorkOrderRecord newRecord(WorkOrder order, WorkOrderAction action, WorkOrderStatus from,
             String description, EquipmentActor actor, Date time)
     {
         WorkOrderRecord record = new WorkOrderRecord();
@@ -234,7 +324,7 @@ public class WorkOrderServiceImpl implements IWorkOrderService
         record.setActorId(actor.getUserId());
         record.setActorName(actor.getDisplayName());
         record.setCreateTime(time);
-        requireWritten(mapper.insertRecord(record));
+        return record;
     }
 
     private void setUpdated(WorkOrder order, EquipmentActor actor, Date now)

@@ -7,6 +7,9 @@ import com.ruoyi.equipment.dto.WorkOrderAssignRequest;
 import com.ruoyi.equipment.dto.WorkOrderCancelRequest;
 import com.ruoyi.equipment.dto.WorkOrderCreateRequest;
 import com.ruoyi.equipment.dto.WorkOrderQuery;
+import com.ruoyi.equipment.dto.WorkOrderProcessRequest;
+import com.ruoyi.equipment.dto.WorkOrderSubmitReviewRequest;
+import com.ruoyi.equipment.dto.WorkOrderReviewRequest;
 import com.ruoyi.equipment.vo.MaintainerOption;
 
 public interface IWorkOrderService
@@ -18,4 +21,7 @@ public interface IWorkOrderService
     WorkOrder create(WorkOrderCreateRequest request);
     WorkOrder assign(Long id, WorkOrderAssignRequest request);
     WorkOrder cancel(Long id, WorkOrderCancelRequest request);
+    WorkOrder process(Long id, WorkOrderProcessRequest request);
+    WorkOrder submitReview(Long id, WorkOrderSubmitReviewRequest request);
+    WorkOrder review(Long id, WorkOrderReviewRequest request);
 }

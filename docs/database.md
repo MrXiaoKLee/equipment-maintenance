@@ -1,4 +1,4 @@
-# 业务数据库：P2与P3
+# 业务数据库：P2至P4
 
 项目库为 `equipment_maintenance`，MySQL8、InnoDB、utf8mb4。完整字段定义见README第8节和实际DDL `sql/001_business_schema.sql`。
 
@@ -8,22 +8,23 @@
 2. 执行 `sql/001_business_schema.sql`。
 3. 执行 `sql/002_business_dict_menu.sql`。
 4. 执行 `sql/003_work_order_record.sql` 与 `sql/004_work_order_dict_menu.sql`。
-5. 重启后端并重新登录，加载字典、菜单及权限。
+5. 执行 `sql/005_work_order_process_review_menu.sql`，新增处理、提交及复核按钮权限。
+6. 重启后端并重新登录，加载字典、菜单及权限。
 
-本机已完成P2及P3，原版31表加三张业务表共34表。业务脚本无DROP/TRUNCATE，菜单脚本重复执行不重复新增，也不重置已有配置。`CREATE TABLE IF NOT EXISTS`仅处理缺失表，后续结构升级新增编号脚本，不能以重跑001代替迁移。
+本机已完成P2至P4迁移，原版31表加三张业务表共34表。业务脚本无DROP/TRUNCATE，菜单脚本重复执行不重复新增，也不重置已有配置。`CREATE TABLE IF NOT EXISTS`仅处理缺失表，后续结构升级新增编号脚本，不能以重跑001代替迁移。
 
 ## 已建立结构
 
 | 表 | 当前用途 | 约束与索引 |
 | --- | --- | --- |
 | `eq_equipment` | 设备台账基本信息、使用状态和版本 | BIGINT自增主键；设备编号唯一；类型+状态组合索引 |
-| `eq_work_order` | 报修、分配、取消的工单主表，支持设备历史及未结束检查 | 工单编号唯一；设备、报修人、处理人外键；设备时间、报修人时间、处理人状态时间、状态时间索引 |
+| `eq_work_order` | 报修、分配、取消、维护处理及复核的工单主表，支持设备历史及未结束检查 | 工单编号唯一；设备、报修人、处理人外键；设备时间、报修人时间、处理人状态时间、状态时间索引 |
 
 `eq_work_order_record`为P3新增动作记录表，含工单、操作者外键及时间线索引，记录字段见下文。
 
 设备编号32、名称100、类型32、型号100、位置200、状态32、说明2000字符。版本初始0；修改由条件更新递增。必填、唯一和引用约束由数据库执行，格式与状态规则在Service校验。主外键与原版`sys_user.user_id`使用一致的有符号BIGINT，外键DDL已在本机执行成功。没有级联删除。
 
-工单字段与README8.4一致，P3已有创建、分配、取消写入接口。003迁移新增eq_work_order_record，字段与README8.5一致，工单和操作者有非级联外键，索引(work_order_id,create_time,record_id)。P3仅追加CREATE、ASSIGN、CANCEL，P4再追加维护与复核动作。
+工单字段与README8.4一致，P3已有创建、分配、取消写入接口。003迁移新增eq_work_order_record，字段与README8.5一致，工单和操作者有非级联外键，索引(work_order_id,create_time,record_id)。P3追加CREATE、ASSIGN、CANCEL；P4追加PROCESS_NOTE、SUBMIT_REVIEW、REVIEW_REJECT、REVIEW_APPROVE。每轮结果写记录表的cause_analysis、measures、result_description，不覆盖历史。
 
 ## 字典和权限数据
 
@@ -40,3 +41,9 @@
 P3报修接口在事务中先锁设备再查在用状态，并将工单及记录一起写入。按「设备 → 工单」顺序取锁。P3已使用实际API验证报废与报修竞争，以及分配与取消竞争；结果见验证记录。
 
 SQL初始化不包含样例业务数据。开发库目前的三条模拟设备由接口及浏览器验收创建，模拟用户已停用；P3接口验收另外创建了明确标注的模拟设备与工单，未清理正常开发数据。单连接MySQL事务测试使用连接级临时业务表克隆；正式外键及跨连接行为不以临时表测试替代。
+
+## P4变化
+
+005仅新增三个功能权限和相应角色授权：eq_maintainer获得process/submit，eq_manager获得review。多角色账号权限取并集，但处理动作仍要求当前handler_id匹配。脚本已重复执行两次，三个权限各一条，不改变已有用户的角色关联。无新增业务表或字段，项目库仍34表。
+
+追加处理也更新工单version与审计时间；提交写last_submit_time，通过写closed_time，退回保留原处理人和之前的提交时间。条件更新检查ID、当前状态、版本，维护动作另外限定handler_id。结果字段仅在提交记录中保存，其他动作不填充。事务测试已覆盖四种新动作的记录写入失败回滚，以及两轮提交历史保留；跨连接冲突另用真实API验收。

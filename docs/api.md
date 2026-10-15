@@ -1,6 +1,6 @@
 # 已实现接口：设备台账与故障工单
 
-当前文档覆盖P2与P3。前端开发代理将 `/dev-api` 转发至本机8080，并去除该前缀。请求携带若依 `Authorization: Bearer <token>`；不在示例中保存真实令牌。
+当前文档覆盖P2至P4。前端开发代理将 `/dev-api` 转发至本机8080，并去除该前缀。请求携带若依 `Authorization: Bearer <token>`；不在示例中保存真实令牌。
 
 | 方法与路径 | 权限 | 参数与响应 |
 | --- | --- | --- |
@@ -99,4 +99,30 @@
 
 本人报修或管理人员可取消待受理工单，reason必填且最多2000字，兼容description作为旧字段别名。处理中、已取消等状态不能取消。版本缺失400，版本过期409；动作权限不足403；范围外详情、记录、对象动作按不存在404。
 
-读取范围：管理人员全部，报修人员reporter_id=本人，维护人员handler_id=本人，多角色取并集。设备历史采用同一规则。数据库ID均为JSON字符串，版本为整数。记录保留操作者显示名快照；无记录修改/删除、原始报修修改、处理中转派、维护处理与复核接口。请求解析错误返回400及固定提示，持久化错误返回500及固定提示，不把SQL或堆栈返回前端。
+读取范围：管理人员全部，报修人员reporter_id=本人，维护人员handler_id=本人，多角色取并集。设备历史采用同一规则。数据库ID均为JSON字符串，版本为整数。记录保留操作者显示名快照；无记录修改/删除、原始报修修改、处理中转派接口（维护处理与复核见下节）。请求解析错误返回400及固定提示，持久化错误返回500及固定提示，不把SQL或堆栈返回前端。
+
+## P4维护处理与复核接口
+
+| 方法与路径 | 权限 | 请求 |
+| --- | --- | --- |
+| POST `/equipment/workorder/{id}/records` | `equipment:workorder:process` | version、description（必填处理说明） |
+| POST `/equipment/workorder/{id}/submit-review` | `equipment:workorder:submit` | version、causeAnalysis、measures、resultDescription |
+| POST `/equipment/workorder/{id}/review` | `equipment:workorder:review` | version、decision（APPROVE或REJECT）、description（复核结论或退回原因） |
+
+三个接口均返回最新工单data及递增后的version。文本先去除首尾空白，每个必填字段最多2000字符；空白、超长、缺少有效版本或非法决定400，过期版本409。工单范围外404，动作角色或处理人不符403。不会绑定请求伪造的actorId、handlerId、status或时间字段。
+
+仅当前被分配、仍具有有效维护角色的账号可在PROCESSING状态追加处理和提交结果；管理员也须是当前处理人。追加记录不变状态但递增版本。提交写lastSubmitTime并转PENDING_REVIEW，原因、措施、结果保存于该轮SUBMIT_REVIEW记录。待复核不能追加或重提。管理人员复核退回后保留处理人、提交时间及旧轮结果；通过转CLOSED并写closedTime。两种决定都需要说明，关闭后禁止处理或复核，设备使用状态不随工单关闭改变。
+
+```json
+{ "version": 2, "causeAnalysis": "待确认，模拟判断为连接接触不良", "measures": "模拟检查连接与采集设置", "resultDescription": "模拟复查读数稳定" }
+```
+
+```json
+{ "version": 3, "decision": "REJECT", "description": "模拟要求补充通道对比结果" }
+```
+
+```json
+{ "version": 5, "decision": "APPROVE", "description": "模拟复核通过，结果与过程记录完整" }
+```
+
+记录增加PROCESS_NOTE、SUBMIT_REVIEW、REVIEW_REJECT、REVIEW_APPROVE；GET records继续按createTime、recordId升序返回每轮完整结果，详情组件展示最近一轮结果并保留全部时间线。所有动作均先锁设备再锁工单，在同一READ_COMMITTED事务中条件更新主表并追加记录；任一记录写入失败回滚主表及流程时间。

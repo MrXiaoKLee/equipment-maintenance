@@ -28,6 +28,8 @@
       <el-table-column label="提交时间" prop="createTime" width="175" />
       <el-table-column label="操作" width="190" fixed="right"><template #default="{ row }">
         <el-button v-hasPermi="['equipment:workorder:query']" link type="primary" @click="showDetail(row)">详情</el-button>
+        <el-button v-if="row.status === 'PROCESSING' && String(row.handlerId) === String(userStore.id)" v-hasPermi="['equipment:workorder:process']" link type="primary" @click="showDetail(row)">处理</el-button>
+        <el-button v-if="row.status === 'PENDING_REVIEW' && isManager" v-hasPermi="['equipment:workorder:review']" link type="primary" @click="showDetail(row)">复核</el-button>
         <el-button v-if="row.status === 'WAITING'" v-hasPermi="['equipment:workorder:assign']" link type="primary" @click="openAssign(row)">分配</el-button>
         <el-button v-if="row.status === 'WAITING' && (isManager || String(row.reporterId) === String(userStore.id))" v-hasPermi="['equipment:workorder:cancel']" link type="danger" @click="openCancel(row)">取消报修</el-button>
       </template></el-table-column>
@@ -70,7 +72,7 @@
       </el-form>
       <template #footer><el-button :disabled="saving" @click="cancelOpen = false">返回</el-button><el-button type="danger" :loading="saving" @click="submitCancel">确认取消报修</el-button></template>
     </el-dialog>
-    <work-order-detail v-model="detailOpen" :work-order-id="detailId" />
+    <work-order-detail v-model="detailOpen" :work-order-id="detailId" @changed="getList" />
   </div>
 </template>
 

@@ -120,7 +120,7 @@
       </el-table>
       <pagination v-show="historyTotal > 0" :total="historyTotal" v-model:page="historyParams.pageNum" v-model:limit="historyParams.pageSize" @pagination="getHistory" />
     </el-dialog>
-    <work-order-detail v-model="historyDetailOpen" :work-order-id="historyDetailId" />
+    <work-order-detail v-model="historyDetailOpen" :work-order-id="historyDetailId" @changed="getHistory" />
   </div>
 </template>
 

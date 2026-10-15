@@ -4,7 +4,7 @@ Equipment Fault and Maintenance Management System
 
 本项目面向实验室设备管理场景，计划基于 Java 和若依开源后台构建设备台账、故障报修、维护处理、结果复核、历史追溯及基础统计功能。使用人员可以记录问题，维护人员可以跟踪处理，管理人员可以复核结果，并保留可查询的处理过程。
 
-本 README 是后续开发的需求与设计基线，包含第一版范围、业务规则、技术方案、数据模型、接口约定、实施顺序和验收标准。当前已导入RuoYi 3.9.2前后端并固定提交，原版登录已验证。设备台账接口与页面、字典菜单和角色权限已实现，P3报修、查询、分配、取消和时间线也已实现，项目库共34表；40项单元测试与4项MySQL事务/Mapper测试、实际API验证、前端生产构建及后端完整打包通过。浏览器台账新增、编辑、详情、状态调整、筛选、空历史及导出已通过验收；P3工单页面的创建、分配、取消、时间线、设备历史及状态筛选已通过浏览器验收；维护处理、复核及统计仍待后续实施。实际导入版本见 [源码基线记录](docs/upstream-baseline.md)，第三方归属见 [来源说明](THIRD_PARTY_NOTICES.md)。
+本 README 是后续开发的需求与设计基线，包含第一版范围、业务规则、技术方案、数据模型、接口约定、实施顺序和验收标准。当前已导入RuoYi 3.9.2前后端并固定提交，原版登录已验证。P2设备台账、P3报修分配取消、P4维护处理和复核接口与页面已实现。项目库共34表；61项单元测试与10项MySQL事务/Mapper测试、P4共43项实际API检查、前端生产构建及后端完整打包通过。P2/P3浏览器验收已通过；P4页面验收进行中。统计导出及空库完整复现仍待后续阶段。实际导入版本见 [源码基线记录](docs/upstream-baseline.md)，第三方归属见 [来源说明](THIRD_PARTY_NOTICES.md)。
 
 | 项目项 | 约定 |
 | --- | --- |
@@ -331,7 +331,7 @@ MySQL保存设备、工单、记录、用户和权限。Redis满足框架登录�
 
 ## 7 目录与代码组织
 
-以下为完整规划目录。当前已有前后端源码、业务迁移001至004、前端锁文件、接口与数据库文档、P2/P3运行说明、验证记录及截图；尚未实现的维护复核与统计部分继续按阶段推进。
+以下为完整规划目录。当前已有前后端源码、业务迁移001至005、前端锁文件、接口与数据库文档、P2至P4运行说明、验证记录及截图；统计与最终交付部分继续按阶段推进。
 
 ```text
 equipment-maintenance/
@@ -707,7 +707,7 @@ CREATE DATABASE equipment_maintenance
 Get-ChildItem -LiteralPath '.\equipment-backend\sql' -Filter '*.sql'
 ```
 
-在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL按001、002、003执行。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
+在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
 
 ### 11.4 后端配置
 
@@ -909,7 +909,7 @@ mvn test -DskipTests=false -Dmaven.test.skip=false
 - [ ] 已执行关键测试与空库复现。
 - [ ] 已完成演示及v0.1.0交付。
 
-P3运行与功能说明见 [故障工单模块](docs/work-orders.md)。P2运行与功能说明见 [设备台账模块](docs/equipment-ledger.md)，实际接口、数据库和测试记录分别见 [接口文档](docs/api.md)、[数据库文档](docs/database.md)、[验证记录](docs/verification.md)。
+P3/P4运行与功能说明见 [故障工单模块](docs/work-orders.md)。P2运行与功能说明见 [设备台账模块](docs/equipment-ledger.md)，实际接口、数据库和测试记录分别见 [接口文档](docs/api.md)、[数据库文档](docs/database.md)、[验证记录](docs/verification.md)。
 
 ### 14.2 第一版完成标准
 

@@ -105,6 +105,13 @@
             version=version+1,update_by=#{updateBy},update_time=#{updateTime}
         WHERE work_order_id=#{workOrderId} AND version=#{version} AND status='WAITING'
     </update>
+    <update id="updateWorkflow">
+        UPDATE eq_work_order SET status=#{order.status},last_submit_time=#{order.lastSubmitTime},
+            closed_time=#{order.closedTime},version=version+1,
+            update_by=#{order.updateBy},update_time=#{order.updateTime}
+        WHERE work_order_id=#{order.workOrderId} AND version=#{order.version} AND status=#{fromStatus}
+        <if test="handlerId != null">AND handler_id=#{handlerId}</if>
+    </update>
     <insert id="insertRecord" useGeneratedKeys="true" keyProperty="recordId">
         INSERT INTO eq_work_order_record (work_order_id,action_type,from_status,to_status,description,
             cause_analysis,measures,result_description,actor_id,actor_name,create_time)
