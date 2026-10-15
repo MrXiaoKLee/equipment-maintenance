@@ -29,3 +29,11 @@ java '-Duser.timezone=Asia/Shanghai' -jar '.\ruoyi-admin\target\ruoyi-admin.jar'
 用户选择本地开发维持若依原版形式。已验证保存的数据库密码可以登录 `equipment_dev` 并访问项目库，随后将用户名和密码直接填写到本地 `application-druid.yml`。主库不再依赖密码环境变量。
 
 真实连接配置加入Git忽略规则；共享示例 `application-druid.example.yml` 不含真实密码。README移除日常启动前输入密码和保存变量的步骤。实际密码不记录到本文。
+
+## 2026年10月15日 P6默认端口与干净副本复现
+
+P6检查发现，前端原始vite.config.js仍默认80、host=true，前期5173通过启动参数提供；首页仍展示上游宣传。已将默认值统一为127.0.0.1:5173、不开自动浏览器，并提供可选VITE_APP_BACKEND_URL用于独立副本代理；首页改为三个按权限显示的业务入口，保留若依来源说明。前端标题在三个环境文件统一。
+
+后端原日志路径为/home/ruoyi/logs，改为启动目录logs，允许LOG_PATH覆盖。日常MySQL仍使用本地直接配置，没有重新引入启动前密码输入流程。
+
+独立MySQL3307、Redis6400、后端8081、前端5174验证了空库导入、干净源码构建、五账号登录及模拟完整流程，正常开发库与服务未被清空或改授权。构建前从Git索引导出源码，不复制原target或node_modules；重新npm ci及Maven clean package完成。图表及首页修改后的前端生产构建成功。

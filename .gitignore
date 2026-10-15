@@ -3,10 +3,13 @@
 **/node_modules/
 **/dist/
 **/coverage/
+**/__pycache__/
+/.local/
 
 # Runtime files
 **/*.log
 /logs/
+**/logs/
 /uploads/
 
 # Local credentials and machine-specific configuration
