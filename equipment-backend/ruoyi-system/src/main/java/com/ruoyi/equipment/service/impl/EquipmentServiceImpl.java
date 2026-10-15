@@ -1,6 +1,5 @@
 package com.ruoyi.equipment.service.impl;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -13,8 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
 import com.github.pagehelper.PageHelper;
 import com.ruoyi.common.constant.HttpStatus;
-import com.ruoyi.common.core.domain.entity.SysRole;
-import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.equipment.domain.Equipment;
@@ -26,8 +23,9 @@ import com.ruoyi.equipment.enums.EquipmentStatus;
 import com.ruoyi.equipment.mapper.EquipmentMapper;
 import com.ruoyi.equipment.service.IEquipmentService;
 import com.ruoyi.equipment.vo.EquipmentWorkOrder;
+import com.ruoyi.equipment.security.EquipmentActor;
+import com.ruoyi.equipment.security.EquipmentAuthorization;
 import com.ruoyi.system.service.ISysDictTypeService;
-import com.ruoyi.system.service.ISysUserService;
 
 /** 设备校验、权限、版本更新与报废规则。 */
 @Service
@@ -35,13 +33,13 @@ public class EquipmentServiceImpl implements IEquipmentService
 {
     private final EquipmentMapper mapper;
     private final ISysDictTypeService dictService;
-    private final ISysUserService userService;
+    private final EquipmentAuthorization authorization;
 
-    public EquipmentServiceImpl(EquipmentMapper mapper, ISysDictTypeService dictService, ISysUserService userService)
+    public EquipmentServiceImpl(EquipmentMapper mapper, ISysDictTypeService dictService, EquipmentAuthorization authorization)
     {
         this.mapper = mapper;
         this.dictService = dictService;
-        this.userService = userService;
+        this.authorization = authorization;
     }
 
     @Override
@@ -177,11 +175,11 @@ public class EquipmentServiceImpl implements IEquipmentService
     @Override
     public List<EquipmentWorkOrder> history(Long id, int pageNum, int pageSize)
     {
-        List<SysRole> roles = requireReader();
+        EquipmentActor actor = authorization.requireReader();
         requireEquipment(mapper.selectById(id));
-        boolean all = hasRole(roles, "eq_manager");
-        boolean reporter = hasRole(roles, "eq_reporter");
-        boolean maintainer = hasRole(roles, "eq_maintainer");
+        boolean all = actor.isManager();
+        boolean reporter = actor.isReporter();
+        boolean maintainer = actor.isMaintainer();
         // 先确认设备存在，再开始分页，避免设备查询消耗分页上下文。
         PageHelper.startPage(Math.max(pageNum, 1), Math.min(Math.max(pageSize, 1), 100));
         try
@@ -256,43 +254,14 @@ public class EquipmentServiceImpl implements IEquipmentService
         }
     }
 
-    private List<SysRole> requireReader()
+    private void requireReader()
     {
-        List<SysRole> roles = currentRoles();
-        if (!hasRole(roles, "eq_manager") && !hasRole(roles, "eq_reporter") && !hasRole(roles, "eq_maintainer"))
-        {
-            throw new ServiceException("无设备台账访问权限", HttpStatus.FORBIDDEN);
-        }
-        return roles;
+        authorization.requireReader();
     }
 
     private void requireManager()
     {
-        if (!hasRole(currentRoles(), "eq_manager"))
-        {
-            throw new ServiceException("只有设备管理人员可以修改设备", HttpStatus.FORBIDDEN);
-        }
-    }
-
-    private List<SysRole> currentRoles()
-    {
-        // 登录缓存可能尚未过期，业务接口仍核对当前账号及角色状态。
-        SysUser user = userService.selectUserById(SecurityUtils.getUserId());
-        if (user == null || !"0".equals(user.getStatus()) || !"0".equals(user.getDelFlag()))
-        {
-            throw new ServiceException("账号已停用或不存在", HttpStatus.FORBIDDEN);
-        }
-        return user.getRoles() == null ? Collections.emptyList() : user.getRoles();
-    }
-
-    private boolean hasRole(List<SysRole> roles, String key)
-    {
-        if (SecurityUtils.isAdmin())
-        {
-            return true;
-        }
-        return roles.stream().anyMatch(role -> key.equals(role.getRoleKey())
-                && "0".equals(role.getStatus()) && "0".equals(role.getDelFlag()));
+        authorization.requireManager();
     }
 
     private String required(String value, String label, int max)

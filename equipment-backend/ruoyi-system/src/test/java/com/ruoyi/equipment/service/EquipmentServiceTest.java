@@ -41,7 +41,7 @@ class EquipmentServiceTest
         mapper = mock(EquipmentMapper.class);
         dictionaries = mock(ISysDictTypeService.class);
         users = mock(ISysUserService.class);
-        service = new EquipmentServiceImpl(mapper, dictionaries, users);
+        service = new EquipmentServiceImpl(mapper, dictionaries, new com.ruoyi.equipment.security.EquipmentAuthorization(users));
         login(1L);
     }
 

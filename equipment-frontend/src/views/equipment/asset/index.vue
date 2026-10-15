@@ -116,25 +116,16 @@
         <el-table-column label="报修人" prop="reporterName" width="100" />
         <el-table-column label="处理人" prop="handlerName" width="100" />
         <el-table-column label="提交时间" prop="createTime" width="175" />
-        <el-table-column label="操作" width="70"><template #default="scope"><el-button link type="primary" @click="historyDetail = scope.row; historyDetailOpen = true">查看</el-button></template></el-table-column>
+        <el-table-column label="操作" width="70"><template #default="scope"><el-button link type="primary" v-hasPermi="['equipment:workorder:query']" @click="historyDetailId = scope.row.workOrderId; historyDetailOpen = true">查看</el-button></template></el-table-column>
       </el-table>
       <pagination v-show="historyTotal > 0" :total="historyTotal" v-model:page="historyParams.pageNum" v-model:limit="historyParams.pageSize" @pagination="getHistory" />
     </el-dialog>
-    <el-dialog v-model="historyDetailOpen" title="工单基本信息" width="650px" append-to-body>
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="工单编号">{{ historyDetail.workOrderNo }}</el-descriptions-item>
-        <el-descriptions-item label="标题">{{ historyDetail.title }}</el-descriptions-item>
-        <el-descriptions-item label="故障现象"><span class="record-text">{{ historyDetail.symptom }}</span></el-descriptions-item>
-        <el-descriptions-item label="故障类别">{{ faultLabels[historyDetail.faultCategory] || historyDetail.faultCategory }}</el-descriptions-item>
-        <el-descriptions-item label="发生时间">{{ historyDetail.occurredTime }}</el-descriptions-item>
-        <el-descriptions-item label="提交时间">{{ historyDetail.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="状态"><dict-tag :options="eq_work_order_status" :value="historyDetail.status" /></el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
+    <work-order-detail v-model="historyDetailOpen" :work-order-id="historyDetailId" />
   </div>
 </template>
 
 <script setup name="EquipmentAsset">
+import WorkOrderDetail from '@/components/Equipment/WorkOrderDetail.vue'
 import { listEquipment, getEquipment, addEquipment, updateEquipment, changeEquipmentStatus, listEquipmentHistory } from '@/api/equipment/asset'
 
 const { proxy } = getCurrentInstance()
@@ -168,8 +159,7 @@ const historyTotal = ref(0)
 const historyLoading = ref(false)
 const historyParams = reactive({ pageNum: 1, pageSize: 10 })
 const historyDetailOpen = ref(false)
-const historyDetail = ref({})
-const faultLabels = { MECHANICAL: '机械', ELECTRICAL: '电气', ACQUISITION: '采集与传感', SOFTWARE: '软件与控制', OTHER: '其他' }
+const historyDetailId = ref(null)
 
 function typeLabel(value) {
   return eq_equipment_type.value.find(item => item.value === value)?.label || value

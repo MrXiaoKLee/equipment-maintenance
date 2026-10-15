@@ -4,6 +4,10 @@ export function listEquipment(params) {
   return request({ url: '/equipment/asset/list', method: 'get', params })
 }
 
+export function listEquipmentOptions(params) {
+  return request({ url: '/equipment/asset/options', method: 'get', params })
+}
+
 export function getEquipment(id) {
   return request({ url: `/equipment/asset/${id}`, method: 'get' })
 }

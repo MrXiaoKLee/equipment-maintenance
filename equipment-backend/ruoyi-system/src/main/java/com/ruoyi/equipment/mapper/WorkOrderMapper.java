@@ -1,0 +1,24 @@
+package com.ruoyi.equipment.mapper;
+
+import java.util.List;
+import org.apache.ibatis.annotations.Param;
+import com.ruoyi.equipment.domain.WorkOrder;
+import com.ruoyi.equipment.domain.WorkOrderRecord;
+import com.ruoyi.equipment.dto.WorkOrderQuery;
+import com.ruoyi.equipment.security.EquipmentActor;
+import com.ruoyi.equipment.vo.MaintainerOption;
+
+public interface WorkOrderMapper
+{
+    List<WorkOrder> selectList(@Param("query") WorkOrderQuery query, @Param("actor") EquipmentActor actor);
+    WorkOrder selectById(Long id);
+    WorkOrder lockById(Long id);
+    int countVisibleOpen(@Param("equipmentId") Long equipmentId, @Param("actor") EquipmentActor actor);
+    int insert(WorkOrder order);
+    int assign(WorkOrder order);
+    int cancel(WorkOrder order);
+    int insertRecord(WorkOrderRecord record);
+    List<WorkOrderRecord> selectRecords(Long id);
+    List<MaintainerOption> selectMaintainers(@Param("keyword") String keyword);
+    MaintainerOption lockMaintainer(Long id);
+}
