@@ -10,7 +10,7 @@ Equipment Fault and Maintenance Management System
 
 首次运行见 [本地初始化与启动](docs/local-setup.md)，演示步骤见 [演示指南](docs/demo-guide.md)，交付范围和限制见 [v0.1.0交付说明](docs/release-v0.1.0.md)。现有开发库不要重新导入框架SQL或演示数据。
 
-后续代码精简已移除代码生成、表单构建、定时任务、通知公告及示例接口，后端保留admin、framework、system、common四个模块。已有环境执行新增迁移007并重新登录；本机已执行，设备与工单数据保留。范围及验证见 [代码精简记录](docs/code-cleanup.md)。
+后续代码精简已移除代码生成、表单构建、定时任务、通知公告及示例接口，后端保留admin、framework、system、common四个模块。数据库现已通过010迁移精简为 **17张表**，同时清理已停用功能的菜单授权及字典，设备、工单、用户和有效授权保留。已有环境先备份，再按尚未执行的编号迁移升级；不要重新导入框架SQL。范围及验证见 [代码精简记录](docs/code-cleanup.md) 和 [数据库精简记录](docs/database-cleanup.md)。上文P6的34张表是v0.1.0历史验收状态。
 
 | 项目项 | 约定 |
 | --- | --- |
@@ -337,7 +337,7 @@ MySQL保存设备、工单、记录、用户和权限。Redis满足框架登录�
 
 ## 7 目录与代码组织
 
-当前结构如下。业务迁移为001至009，历史v0.1.0交付以该Git标签为准。
+当前结构如下。业务迁移为001至010，历史v0.1.0交付以该Git标签为准。
 
 ```text
 equipment-maintenance/
@@ -368,7 +368,8 @@ equipment-maintenance/
 │   ├── 006_statistics_export_menu.sql
 │   ├── 007_remove_unused_module_menus.sql
 │   ├── 008_xiaokang_branding.sql
-│   └── 009_hide_upstream_website_menu.sql
+│   ├── 009_hide_upstream_website_menu.sql
+│   └── 010_remove_unused_framework_data.sql
 ├── scripts/
 │   ├── initialize_database.py
 │   └── seed_demo.py
@@ -720,7 +721,7 @@ CREATE DATABASE equipment_maintenance
 Get-ChildItem -LiteralPath '.\equipment-backend\sql' -Filter '*.sql'
 ```
 
-在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`、`007_remove_unused_module_menus.sql`、`008_xiaokang_branding.sql`、`009_hide_upstream_website_menu.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
+在MySQL客户端先选择 `equipment_maintenance`，再用 `SOURCE` 导入所选版本的主脚本及其要求的任务表脚本。业务SQL依次执行 `sql/001_business_schema.sql`、`002_business_dict_menu.sql`、`003_work_order_record.sql`、`004_work_order_dict_menu.sql`、`005_work_order_process_review_menu.sql`、`006_statistics_export_menu.sql`、`007_remove_unused_module_menus.sql`、`008_xiaokang_branding.sql`、`009_hide_upstream_website_menu.sql`、`010_remove_unused_framework_data.sql`。模拟数据只用于空的本地演示库，不能向真实业务库或已有开发数据重复导入。
 
 ### 11.4 后端配置
 

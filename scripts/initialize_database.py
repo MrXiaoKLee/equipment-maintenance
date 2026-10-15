@@ -1,4 +1,4 @@
-"""Import the pinned framework and business SQL into an existing, empty local database."""
+"""Initialize the current application's 17 tables in an existing, empty local database."""
 import argparse
 import getpass
 import re
@@ -9,7 +9,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SQL_FILES = [
     "equipment-backend/sql/ry_20260417.sql",
-    "equipment-backend/sql/quartz.sql",
     "sql/001_business_schema.sql",
     "sql/002_business_dict_menu.sql",
     "sql/003_work_order_record.sql",
@@ -19,7 +18,16 @@ SQL_FILES = [
     "sql/007_remove_unused_module_menus.sql",
     "sql/008_xiaokang_branding.sql",
     "sql/009_hide_upstream_website_menu.sql",
+    "sql/010_remove_unused_framework_data.sql",
 ]
+
+EXPECTED_TABLES = frozenset({
+    'eq_equipment', 'eq_work_order', 'eq_work_order_record',
+    'sys_config', 'sys_dept', 'sys_dict_data', 'sys_dict_type',
+    'sys_logininfor', 'sys_menu', 'sys_oper_log', 'sys_post',
+    'sys_role', 'sys_role_dept', 'sys_role_menu', 'sys_user',
+    'sys_user_post', 'sys_user_role',
+})
 
 
 def option_value(value):
@@ -55,11 +63,12 @@ def initialize(mysql, host, port, user, database, password):
         for relative in SQL_FILES:
             print("Importing " + relative, flush=True)
             run((ROOT / relative).read_bytes())
-        tables = int(run(b"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE';"))
-        if tables != 34:
-            raise RuntimeError("Unexpected table count after import: " + str(tables))
-        print("Initialized 34 tables. No demonstration business data has been inserted.")
-        return tables
+        tables = set(run(b"SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE';").splitlines())
+        if tables != EXPECTED_TABLES:
+            raise RuntimeError("Unexpected tables after import; missing=" + str(sorted(EXPECTED_TABLES - tables))
+                               + ", extra=" + str(sorted(tables - EXPECTED_TABLES)))
+        print("Initialized 17 tables. No demonstration business data has been inserted.")
+        return len(tables)
 
 
 def main():
@@ -73,7 +82,7 @@ def main():
     try:
         initialize(args.mysql, args.host, args.port, args.user, args.database, getpass.getpass("MySQL password (initialization only): "))
     except (ValueError, RuntimeError, FileNotFoundError, OSError) as error:
-        parser.exit(1, str(error) + "\nA failed partial import must be investigated in the disposable database; the script never drops tables.\n")
+        parser.exit(1, str(error) + "\nInvestigate a failed partial import in the disposable database; no automatic cleanup or retry is performed.\n")
 
 
 if __name__ == "__main__":

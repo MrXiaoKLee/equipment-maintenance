@@ -4,7 +4,7 @@
 
 ## 执行顺序
 
-1. 在项目库导入固定若依基座的 `equipment-backend/sql/ry_20260417.sql` 与 `quartz.sql`。
+1. 仅在全空项目库导入固定若依基座的 `equipment-backend/sql/ry_20260417.sql`，不再导入 `quartz.sql`。
 2. 执行 `sql/001_business_schema.sql`。
 3. 执行 `sql/002_business_dict_menu.sql`。
 4. 执行 `sql/003_work_order_record.sql` 与 `sql/004_work_order_dict_menu.sql`。
@@ -13,9 +13,10 @@
 7. 执行 `sql/007_remove_unused_module_menus.sql` 停用已移除功能的菜单。
 8. 执行 `sql/008_xiaokang_branding.sql` 替换仍保持上游默认值的昵称和部门显示名称。
 9. 执行 `sql/009_hide_upstream_website_menu.sql` 停用左侧上游官网入口。
-10. 重启后端并重新登录，加载字典、菜单及权限。
+10. 备份后执行 `sql/010_remove_unused_framework_data.sql`，移除已停用功能的旧表、菜单授权和字典。
+11. 清理对应字典缓存或重启后端，并重新登录，加载字典、菜单及权限。
 
-本机已完成P2至P5迁移，原版31表加三张业务表共34表。业务脚本无DROP/TRUNCATE，菜单脚本重复执行不重复新增，也不重置已有配置。`CREATE TABLE IF NOT EXISTS`仅处理缺失表，后续结构升级新增编号脚本，不能以重跑001代替迁移。
+当前结构为17张表，清单与验证见 [数据库精简](database-cleanup.md)。001至009保留原有建表、字典与菜单演进记录；010包含针对已移除功能的DROP TABLE，执行前须备份。`CREATE TABLE IF NOT EXISTS`仅处理缺失表，不能以重跑001代替结构升级，也不能在已有库重跑框架SQL。下文P2至P6中的34张表描述的是010之前的历史验证状态。
 
 ## 已建立结构
 
