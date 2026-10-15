@@ -33,10 +33,6 @@
       </ol>
       <p>列表与导出只展示本人角色范围内的记录。已提交的每轮结果保留在时间线中。</p>
     </section>
-    <footer>
-      XiaoKang 设备维护管理应用 · 登录、用户、角色、菜单及通用管理能力复用
-      <a href="https://github.com/yangzongzhuan/RuoYi-Vue" target="_blank" rel="noopener noreferrer">开源基座</a>。
-    </footer>
   </div>
 </template>
 
@@ -51,11 +47,9 @@ header { margin-bottom: 20px; }
 .version { color: var(--el-color-primary); font-size: 13px; }
 h1 { font-size: 24px; line-height: 1.5; margin: 8px 0; }
 h2 { font-size: 17px; margin-top: 0; }
-p, li, footer { color: var(--el-text-color-regular); line-height: 1.8; }
+p, li { color: var(--el-text-color-regular); line-height: 1.8; }
 .entry-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px; margin: 20px 0; }
 .entry-grid p { min-height: 52px; font-size: 14px; }
 .workflow { border: 1px solid var(--el-border-color-light); border-radius: 4px; padding: 20px; }
 ol { margin: 0; padding-left: 24px; }
-footer { margin-top: 20px; font-size: 13px; }
-footer a { color: var(--el-color-primary); }
 </style>
